@@ -2,7 +2,9 @@ System functions based on lucidchart diagrams
 
 - Receive destination coordinates
 - Receive current coordinates
-- Create vector from current to destination
+✔ Create vector from current to destination
+    Vector Handler has been created, not tested thorougly. Handles 2D and 3D vectors.
+    3D vector direction angle is represented with cylindrical coordinate system angles
 - Request topographical data around vector from MPS
 - Generate preliminary route (array of waypoint coordinates) from macroscopic topographical data
 - Pass vector to imaging system if route established
