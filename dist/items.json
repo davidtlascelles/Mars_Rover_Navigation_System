@@ -1,0 +1,42 @@
+{
+  "item0": {
+    "profit": 34,
+    "weight": 9
+  },
+  "item1": {
+    "profit": 6,
+    "weight": 14
+  },
+  "item2": {
+    "profit": 45,
+    "weight": 6
+  },
+  "item3": {
+    "profit": 47,
+    "weight": 18
+  },
+  "item4": {
+    "profit": 27,
+    "weight": 19
+  },
+  "item5": {
+    "profit": 16,
+    "weight": 16
+  },
+  "item6": {
+    "profit": 41,
+    "weight": 9
+  },
+  "item7": {
+    "profit": 11,
+    "weight": 6
+  },
+  "item8": {
+    "profit": 25,
+    "weight": 1
+  },
+  "item9": {
+    "profit": 1,
+    "weight": 10
+  }
+}
