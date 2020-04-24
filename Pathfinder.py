@@ -20,25 +20,7 @@ def unwrap_topology():
     return topography_map
 
 
-def pathfind(start, end):
-    if start == end:
-        return
-    MAX_DELTA_Z = .2
-    matrix = unwrap_topology()
-    vector = Vector_Handler.transform(start, end)
-    direction = Vector_Handler.angle(vector, True, True)
-
-    transformed_coordinates = []
-    #              E  0   NE  1    N  2    NW  3    W   4    SW   5    S   6   SE   7
-    transforms = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
-    for transformation in transforms:
-        new_x = start[0] + transformation[0]
-        new_y = start[1] + transformation[1]
-        new_point = (new_x, new_y, matrix[new_x][new_y])
-        transformed_coordinates.append(new_point)
-
-    #print("Remaining: ", Vector_Handler.magnitude(vector))
-
+def cardinal(direction):
     if direction["theta"] == "N":
         heading = 2
     if direction["theta"] == "NW":
@@ -56,69 +38,64 @@ def pathfind(start, end):
     if direction["theta"] == "NE":
         heading = 1
 
-    if abs(transformed_coordinates[heading][2] - start[2]) < MAX_DELTA_Z:
-        print(transformed_coordinates[heading])
-        point = (transformed_coordinates[heading][0], transformed_coordinates[heading][1],
-                 transformed_coordinates[heading][2], Vector_Handler.magnitude(vector), direction["theta"])
-        Database.create_waypoint(conn, point)
-        pathfind(transformed_coordinates[heading], end)
+    return heading
 
-    else:
-        forward_right = (heading + 1) % 7
-        forward_left = (heading - 1) % 7
-        fr = abs(transformed_coordinates[forward_right][2] - start[2])
-        fl = abs(transformed_coordinates[forward_left][2] - start[2])
-        if fr <= fl and fr < MAX_DELTA_Z:
-            print(transformed_coordinates[forward_right])
-            point = (transformed_coordinates[forward_right][0], transformed_coordinates[forward_right][1],
-                     transformed_coordinates[forward_right][2], Vector_Handler.magnitude(vector), direction["theta"])
-            Database.create_waypoint(conn, point)
-            pathfind(transformed_coordinates[forward_right], end)
-        elif fl < fr and fl < MAX_DELTA_Z:
-            print(transformed_coordinates[forward_left])
-            point = (transformed_coordinates[forward_left][0], transformed_coordinates[forward_left][1],
-                     transformed_coordinates[forward_left][2], Vector_Handler.magnitude(vector), direction["theta"])
-            Database.create_waypoint(conn, point)
-            pathfind(transformed_coordinates[forward_left], end)
 
+def travel_direction(heading, start):
+    matrix = unwrap_topology()
+    MAX_DELTA_Z = .2
+
+    #              E  0   NE  1    N  2    NW  3    W   4    SW   5    S   6   SE   7
+    transforms = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
+
+    for i in range(2):
+        if i == 0:
+            new_x = start[0] + transforms[heading][0]
+            new_y = start[1] + transforms[heading][1]
+            next_move = (new_x, new_y, matrix[new_x][new_y])
+            if abs(next_move[2] - start[2]) < MAX_DELTA_Z:
+                return next_move
+
+        new_x_right = start[0] + transforms[(heading + i) % 7][0]
+        new_y_right = start[1] + transforms[(heading + i) % 7][1]
+        next_move_right = (new_x_right, new_y_right, matrix[new_x_right][new_y_right])
+
+        new_x_left = start[0] + transforms[(heading - i) % 7][0]
+        new_y_left = start[1] + transforms[(heading - i) % 7][1]
+        next_move_left = (new_x_left, new_y_left, matrix[new_x_left][new_y_left])
+
+        right_delta_z = abs(next_move_right[2] - start[2])
+        left_delta_z = abs(next_move_left[2] - start[2])
+        if right_delta_z <= left_delta_z and right_delta_z < MAX_DELTA_Z:
+            return next_move_right
+        elif left_delta_z < right_delta_z and left_delta_z < MAX_DELTA_Z:
+            return next_move_left
         else:
-            right = (heading + 2) % 7
-            left = (heading - 2) % 7
-            r = abs(transformed_coordinates[right][2] - start[2])
-            l = abs(transformed_coordinates[left][2] - start[2])
-            if r <= l and r < MAX_DELTA_Z:
-                print(transformed_coordinates[right])
-                point = (transformed_coordinates[right][0], transformed_coordinates[right][1],
-                         transformed_coordinates[right][2], Vector_Handler.magnitude(vector), direction["theta"])
-                Database.create_waypoint(conn, point)
-                pathfind(transformed_coordinates[right], end)
-            elif l < r and l < MAX_DELTA_Z:
-                print(transformed_coordinates[left])
-                point = (transformed_coordinates[left][0], transformed_coordinates[left][1],
-                         transformed_coordinates[left][2], Vector_Handler.magnitude(vector), direction["theta"])
-                Database.create_waypoint(conn, point)
-                pathfind(transformed_coordinates[left], end)
+            print("backtracking")
 
-            else:
-                back_right = (heading + 3) % 7
-                back_left = (heading - 3) % 7
-                br = abs(transformed_coordinates[back_right][2] - start[2])
-                bl = abs(transformed_coordinates[back_left][2] - start[2])
-                if br <= bl and br < MAX_DELTA_Z:
-                    print(transformed_coordinates[back_right])
-                    point = (transformed_coordinates[back_right][0], transformed_coordinates[back_right][1],
-                             transformed_coordinates[back_right][2], Vector_Handler.magnitude(vector), direction["theta"])
-                    Database.create_waypoint(conn, point)
-                    pathfind(transformed_coordinates[back_right], end)
-                elif bl < br and bl < MAX_DELTA_Z:
-                    print(transformed_coordinates[back_left])
-                    point = (transformed_coordinates[back_left][0], transformed_coordinates[back_left][1],
-                             transformed_coordinates[back_left][2], Vector_Handler.magnitude(vector),
-                             direction["theta"])
-                    Database.create_waypoint(conn, point)
-                    pathfind(transformed_coordinates[back_left], end)
-                else:
-                    print("backtracking")
+
+def pathfind(start, end):
+    if start == end:
+        return
+
+    vector = Vector_Handler.transform(start, end)
+    heading = cardinal(Vector_Handler.angle(vector, True, True))
+
+    travel = travel_direction(heading, start)
+    new_point = travel[0], travel[1], travel[2]
+    print(new_point)
+
+    new_vector = Vector_Handler.transform(new_point, end)
+    new_direction = Vector_Handler.angle(new_vector, True, True)["theta"]
+    new_distance = Vector_Handler.magnitude(new_vector)
+
+    db_point = (new_point[0], new_point[1], new_point[2], new_distance, new_direction)
+    Database.create_waypoint(conn, db_point)
+
+    pathfind(travel, end)
+
+
+
 
 
 location = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
