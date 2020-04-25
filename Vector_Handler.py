@@ -12,7 +12,7 @@ def magnitude(mag_vector):
     return mag
 
 
-def transform(rover_coordinates, destination_coordinates):
+def make_vector(rover_coordinates, destination_coordinates):
     """Accepts two points and returns a vector"""
     transformed_destination = []
     for index, element in enumerate(rover_coordinates):

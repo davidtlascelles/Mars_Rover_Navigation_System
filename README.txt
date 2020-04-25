@@ -7,9 +7,10 @@ System functions based on lucidchart diagrams
     1413, 638, 1097.26
 
 ✔ Create vector from current to destination
-    Vector Handler has been created, not tested thorougly. Handles 2D and 3D vectors.
-    3D vector direction angle is represented with cylindrical coordinate system angles
-    **Lots of changes has been made, I need to fix notation**
+    Vector handler supports:
+     - Creating a vector from two points
+     - Finding the magnitude of a vector (2D or 3D)
+     - Finding the cardinal direction of a vector
 
 - Request topographical data around vector from MPS
 

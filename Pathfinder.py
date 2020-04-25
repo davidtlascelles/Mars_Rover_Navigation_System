@@ -80,10 +80,10 @@ def safe_travel_options(start, direction):
     MAX_DELTA_Z = .2
 
     #              E  0   NE  1    N  2    NW  3    W   4    SW   5    S   6   SE   7
-    transforms = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
+    make_vectors = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
 
-    new_x = start[0] + transforms[direction][0]
-    new_y = start[1] + transforms[direction][1]
+    new_x = start[0] + make_vectors[direction][0]
+    new_y = start[1] + make_vectors[direction][1]
     next_move = (new_x, new_y, matrix[new_x][new_y])
 
     if abs(next_move[2] - start[2]) < MAX_DELTA_Z:
@@ -95,12 +95,12 @@ def safe_travel_options_counter(start):
     MAX_DELTA_Z = .2
 
     #              E  0   NE  1    N  2    NW  3    W   4    SW   5    S   6   SE   7
-    transforms = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
+    make_vectors = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
 
     count = 0
-    for i, direction in enumerate(transforms):
-        check_x = start[0] + transforms[i][0]
-        check_y = start[1] + transforms[i][1]
+    for i, direction in enumerate(make_vectors):
+        check_x = start[0] + make_vectors[i][0]
+        check_y = start[1] + make_vectors[i][1]
         check_move = (check_x, check_y, matrix[check_x][check_y])
 
         if abs(check_move[2] - start[2]) < MAX_DELTA_Z:
@@ -112,7 +112,7 @@ def pathfind(start, end):
     if start == end:
         return
 
-    vector = Vector_Handler.transform(start, end)
+    vector = Vector_Handler.make_vector(start, end)
     heading = Vector_Handler.cardinal_heading(vector)
 
     new_distance = Vector_Handler.magnitude(vector)
@@ -122,7 +122,7 @@ def pathfind(start, end):
     if new_distance > 1.5:
         travel = travel_direction(heading, start)
         new_point = (travel[0], travel[1], travel[2])
-        new_vector = Vector_Handler.transform(new_point, end)
+        new_vector = Vector_Handler.make_vector(new_point, end)
         new_direction = Vector_Handler.cardinal_heading(new_vector)
         new_distance = Vector_Handler.magnitude(new_vector)
 
