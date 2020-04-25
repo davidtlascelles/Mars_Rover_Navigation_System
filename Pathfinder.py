@@ -4,8 +4,11 @@ import os
 
 
 def unwrap_topology():
+    """
+    Reads coordinate_topography_map.txt and unwraps it into a 2D array of z values
+    :return: 2D array of z values
+    """
     topography_map = []
-
     with open(os.path.join(location, 'coordinate_topography_map.txt'), "r") as file:
         line = file.readline()
         split_line = line.split("], [")
@@ -21,6 +24,11 @@ def unwrap_topology():
 
 
 def cardinal(direction):
+    """
+
+    :param direction:
+    :return:
+    """
     if direction["theta"] == "N":
         heading = 2
     elif direction["theta"] == "NW":
@@ -105,7 +113,7 @@ def pathfind(start, end):
         return
 
     vector = Vector_Handler.transform(start, end)
-    heading = cardinal(Vector_Handler.angle(vector, True, True))
+    heading = Vector_Handler.cardinal_heading(vector)
 
     new_distance = Vector_Handler.magnitude(vector)
     new_direction = None
@@ -115,7 +123,7 @@ def pathfind(start, end):
         travel = travel_direction(heading, start)
         new_point = (travel[0], travel[1], travel[2])
         new_vector = Vector_Handler.transform(new_point, end)
-        new_direction = Vector_Handler.angle(new_vector, True, True)["theta"]
+        new_direction = Vector_Handler.cardinal_heading(new_vector)
         new_distance = Vector_Handler.magnitude(new_vector)
 
     db_point = (new_point[0], new_point[1], new_point[2], new_distance, new_direction)

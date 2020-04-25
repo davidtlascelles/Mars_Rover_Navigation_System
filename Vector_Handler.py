@@ -21,13 +21,14 @@ def transform(rover_coordinates, destination_coordinates):
     return transformed_destination
 
 
-#### FIX DOCUMENTATION
-def angle(angle_vector, theta_angle, cardinal):
-    """Accepts a vector and returns an angle dictionary. Key will be the greek letter names.
-    2D vectors use 'theta'
-    3D vectors use cylindrical coordinate system; 'phi' and 'rho'"""
-
-    # Cardinal coordinate boundaries
+def cardinal_heading(vector):
+    """
+    Finds the cardinal heading, represented as an integer corresponding with the 8 cardinal directions:
+    E: 0, NE: 1, N: 2, NW: 3, W: 4, SW: 5, S: 6, SE: 7
+    :param vector: accepts a vector tuple
+    :return: returns an integer cardinal direction
+    """
+    # Intermediate cardinal coordinate boundaries (constant)
     NNW = 1.96349540849362
     NWW = 2.74889357189107
     SWW = 3.53429173528852
@@ -37,61 +38,46 @@ def angle(angle_vector, theta_angle, cardinal):
     NEE = 0.392699081698724
     NNE = 1.17809724509617
 
-    angle_dict = {}
+    x = vector[0]
+    y = vector[1]
 
-    if len(angle_vector) == 2 or theta_angle is True:
-        x = angle_vector[0]
-        y = angle_vector[1]
+    heading = None
 
-        if x == 0 and y == 0:
-            angle_dict["theta"] = None
-        elif x < 0 and y == 0:
-            angle_dict["theta"] = (numpy.pi * 3 / 2)
-        elif x > 0 and y == 0:
-            angle_dict["theta"] = (numpy.pi / 2)
-        elif x == 0 and y < 0:
-            angle_dict["theta"] = numpy.pi
-        elif x == 0 and y > 0:
-            angle_dict["theta"] = 0
-        elif x < 0 and y < 0:
-            angle_dict["theta"] = (numpy.pi * 3 / 2) - numpy.arctan((x / y))
-        elif x < 0:
-            angle_dict["theta"] = (numpy.pi / 2) - numpy.arctan((x / y))
-        elif y < 0:
-            angle_dict["theta"] = (numpy.pi * 3 / 2) - numpy.arctan((x / y))
-        else:
-            angle_dict["theta"] = (numpy.pi / 2) - numpy.arctan((x / y))
-
-        if cardinal is True:
-            theta = angle_dict["theta"]
-            if theta is None:
-                return angle_dict
-            if NNE > theta > NEE:
-                angle_dict["theta"] = "NE"
-            if NNW > theta > NNE:
-                angle_dict["theta"] = "N"
-            if NWW > theta > NNW:
-                angle_dict["theta"] = "NW"
-            if SWW > theta > NWW:
-                angle_dict["theta"] = "W"
-            if SSW > theta > SWW:
-                angle_dict["theta"] = "SW"
-            if SSE > theta > SSW:
-                angle_dict["theta"] = "S"
-            if SEE > theta > SSE:
-                angle_dict["theta"] = "SE"
-            if NEE > theta or theta > SEE:
-                angle_dict["theta"] = "E"
-
-    elif len(angle_vector) == 3:
-        x = angle_vector[0]
-        y = angle_vector[1]
-        z = angle_vector[2]
-
-        angle_dict["phi"] = numpy.arctan(x / y)
-        angle_dict["rho"] = numpy.arctan(x / z)
+    if x == 0 and y == 0:
+        return heading
+    elif x < 0 and y == 0:
+        heading = (numpy.pi * 3 / 2)
+    elif x > 0 and y == 0:
+        heading = (numpy.pi / 2)
+    elif x == 0 and y < 0:
+        heading = numpy.pi
+    elif x == 0 and y > 0:
+        heading = 0
+    elif x < 0 and y < 0:
+        heading = (numpy.pi * 3 / 2) - numpy.arctan((x / y))
+    elif x < 0:
+        heading = (numpy.pi / 2) - numpy.arctan((x / y))
+    elif y < 0:
+        heading = (numpy.pi * 3 / 2) - numpy.arctan((x / y))
     else:
-        print("not a 2d or 3d vector")
+        heading = (numpy.pi / 2) - numpy.arctan((x / y))
 
-    return angle_dict
+    if NNE > heading > NEE:
+        return 1    # NE
+    if NNW > heading > NNE:
+        return 2    # N
+    if NWW > heading > NNW:
+        return 3    # NW
+    if SWW > heading > NWW:
+        return 4    # W
+    if SSW > heading > SWW:
+        return 5    # SW
+    if SSE > heading > SSW:
+        return 6    # S
+    if SEE > heading > SSE:
+        return 7    # SE
+    if NEE > heading or heading > SEE:
+        return 0    # E
+
+
 
