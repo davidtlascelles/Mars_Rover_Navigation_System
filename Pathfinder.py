@@ -149,7 +149,7 @@ database_filepath = os.path.join(location, file_name)
 # Establishes a connection to the DB, creates a connection object
 connection = Database.create_connection(database_filepath)
 
-rover_position = (1413, 638, 1097.26)
+rover_position = (1068, 873, 1101.01)
 destination = (862, 771, 1109.11)
 # destination = (1402, 637, 1097.7) # Works
 # destination = (749, 574, 1117.56)

@@ -3,7 +3,7 @@ System functions based on lucidchart diagrams
 - Receive coordinates
     ** Program that interfaces with the comms to recieve coordinate points from Mission Control or Orbiting MPS
     Destination Coordinates: 749, 574, 1117.56
-    Current Coordinates: 1413, 638, 1097.26
+    Rover Current Coordinates: 1068, 873, 1101.01
 
 - Receive topographical data
     ** Program that interfaces with the comms to uplink a vector and downlink topographical data
