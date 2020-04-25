@@ -63,21 +63,18 @@ def cardinal_heading(vector):
         heading = (numpy.pi / 2) - numpy.arctan((x / y))
 
     if NNE > heading > NEE:
-        return 1    # NE
+        return 1  # NE
     if NNW > heading > NNE:
-        return 2    # N
+        return 2  # N
     if NWW > heading > NNW:
-        return 3    # NW
+        return 3  # NW
     if SWW > heading > NWW:
-        return 4    # W
+        return 4  # W
     if SSW > heading > SWW:
-        return 5    # SW
+        return 5  # SW
     if SSE > heading > SSW:
-        return 6    # S
+        return 6  # S
     if SEE > heading > SSE:
-        return 7    # SE
+        return 7  # SE
     if NEE > heading or heading > SEE:
-        return 0    # E
-
-
-
+        return 0  # E

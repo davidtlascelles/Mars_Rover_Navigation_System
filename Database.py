@@ -57,16 +57,16 @@ def create_waypoint(connection, waypoint):
     return cur.lastrowid
 
 
-def delete_point(connection, id, table):
+def delete_point(connection, key, table):
     """
     Delete a waypoint of a specific id
     :param connection: Connection object
-    :param id: x, y coordinate pair
+    :param key: x, y coordinate pair
     :param table: String defining table name to delete point from
     """
     sql = f'DELETE FROM {table} WHERE id=?'
     cur = connection.cursor()
-    cur.execute(sql, (id,))
+    cur.execute(sql, (key,))
     connection.commit()
 
 

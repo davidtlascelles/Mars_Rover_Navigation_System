@@ -1,6 +1,7 @@
-import Vector_Handler
-import Database
 import os
+
+import Database
+import Vector_Handler
 
 
 def unwrap_topology():
@@ -148,7 +149,6 @@ database_filepath = os.path.join(location, file_name)
 # Establishes a connection to the DB, creates a connection object
 connection = Database.create_connection(database_filepath)
 
-
 rover_position = (1413, 638, 1097.26)
 destination = (862, 771, 1109.11)
 # destination = (1402, 637, 1097.7) # Works
@@ -158,6 +158,4 @@ destination = (862, 771, 1109.11)
 Database.delete_all_rows(connection, 'waypoints')
 Database.delete_all_rows(connection, 'checkpoints')
 
-
 pathfind(rover_position, destination)
-
