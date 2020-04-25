@@ -47,7 +47,7 @@ def create_waypoint(connection, waypoint):
     """
     Create a new waypoint in the waypoints table
     :param connection: Connection object
-    :param waypoint: Waypoint tuple (x, y, z, distance, heading)
+    :param waypoint: Waypoint tuple (x, y, z, distance, heading, visit_count)
     :return: waypoint id
     """
     waypoint_list = list(waypoint)
@@ -56,8 +56,8 @@ def create_waypoint(connection, waypoint):
 
     keyed_waypoint = tuple(waypoint_list)
 
-    sql = ''' INSERT INTO waypoints(waypoint_id, x, y, z, distance, heading)
-              VALUES(?,?,?,?,?,?) '''
+    sql = ''' INSERT INTO waypoints(waypoint_id, x, y, z, distance, heading, visit_count)
+              VALUES(?,?,?,?,?,?,?) '''
     cur = connection.cursor()
     cur.execute(sql, keyed_waypoint)
     return cur.lastrowid
@@ -70,7 +70,13 @@ def delete_point(connection, key, table):
     :param key: x, y coordinate pair
     :param table: String defining table name to delete point from
     """
-    sql = f'DELETE FROM {table} WHERE id=?'
+    if table == "waypoints":
+        key_name = "waypoint_id"
+        key = compound_key(key)
+    elif table == "checkpoints":
+        key_name = "checkpoint_id"
+
+    sql = f'DELETE FROM {table} WHERE {key_name}=?'
     cur = connection.cursor()
     cur.execute(sql, (key,))
     connection.commit()
@@ -90,13 +96,13 @@ def create_checkpoint(connection, checkpoint):
     return cur.lastrowid
 
 
-def select_point_by_key(connection, key, table):
+def select_point_by_key(connection, key, table, return_row = None):
     """
     Query points by key and table
     :param connection: Connection object
     :param key: x, y coordinate pair
     :param table: String defining table name to delete point from
-    :return: row of data
+    :return: coordinate tuple
     """
     if table == 'checkpoints':
         collumn = 'checkpoint_id'
@@ -105,11 +111,43 @@ def select_point_by_key(connection, key, table):
         collumn = 'waypoint_id'
 
     cur = connection.cursor()
-    cur.execute(f"SELECT * FROM {table} WHERE {collumn}=?", (int(key),))
+    cur.execute(f"SELECT * FROM {table} WHERE {collumn}=?", (key,))
 
     row = cur.fetchone()
-
+    if row is None:
+        return None
+    if return_row is None:
+        return point_tuple(connection, row)
     return row
+
+def select_point_by_visited(connection, visited):
+    cur = connection.cursor()
+    cur.execute(f"SELECT * FROM waypoints WHERE visit_count=?", (visited,))
+    row = cur.fetchone()
+    if row is None:
+        return None
+    return point_tuple(connection, row)
+
+
+def get_visited_count(connection, key):
+    key = compound_key(key)
+    cur = connection.cursor()
+    cur.execute(f"SELECT * FROM waypoints WHERE waypoint_id=?", (key,))
+    row = cur.fetchone()
+    return row[6]
+
+
+def update_value(connection, key, table, column, value):
+    if table == "waypoints":
+        key_name = "waypoint_id"
+        key = compound_key(key)
+    elif table == "checkpoints":
+        key_name = "checkpoint_id"
+
+    sql = f'UPDATE {table} SET {column} = {value} WHERE {key_name}=?;'
+    cur = connection.cursor()
+    cur.execute(sql, (key,))
+    connection.commit()
 
 
 def compound_key(key):
@@ -122,6 +160,18 @@ def compound_key(key):
     key = key[0] * (10 ** zeros) + key[1]
 
     return key
+
+
+def point_tuple(connection, point):
+    x = point[1]
+    y = point[2]
+    key = compound_key((x, y))
+    cur = connection.cursor()
+    cur.execute(f"SELECT * FROM waypoints WHERE waypoint_id=?", (key,))
+    z = cur.fetchone()[3]
+    coordinate_point = (x, y, z)
+    return coordinate_point
+
 
 def table_size(connection, table):
     """
@@ -147,7 +197,8 @@ def create_tables(connection):
                                             y INTEGER, 
                                             z REAL,
                                             distance REAL,
-                                            heading TEXT
+                                            heading TEXT,
+                                            visit_count INTEGER
                                     ); """
 
     sql_create_checkpoints_table = """ CREATE TABLE IF NOT EXISTS checkpoints(
