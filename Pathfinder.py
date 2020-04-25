@@ -152,4 +152,8 @@ rover_position = (1413, 638, 1097.26)
 destination = (1402, 637, 1097.7)
 # destination = (749, 574, 1117.56)
 
+Database.delete_all_rows(conn, 'waypoints')
+Database.delete_all_rows(conn, 'checkpoints')
+
 pathfind(rover_position, destination)
+

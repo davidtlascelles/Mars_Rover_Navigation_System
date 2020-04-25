@@ -31,6 +31,18 @@ def create_table(connection, create_table_sql):
         print(e)
 
 
+def delete_all_rows(connection, table):
+    """
+    Delete all rows in the table defined by the second argument
+    :param connection: Connection object
+    :param table: String defining table name to delete
+    """
+    sql = f"DELETE FROM {table}"
+    cur = connection.cursor()
+    cur.execute(sql)
+    connection.commit()
+
+
 def create_waypoint(connection, waypoint):
     """
     Create a new waypoint in the waypoints table
@@ -43,6 +55,19 @@ def create_waypoint(connection, waypoint):
     cur = connection.cursor()
     cur.execute(sql, waypoint)
     return cur.lastrowid
+
+
+def delete_point(connection, id, table):
+    """
+    Delete a waypoint of a specific id
+    :param connection: Connection object
+    :param id: x, y coordinate pair
+    :param table: String defining table name to delete point from
+    """
+    sql = f'DELETE FROM {table} WHERE id=?'
+    cur = connection.cursor()
+    cur.execute(sql, (id,))
+    connection.commit()
 
 
 def create_checkpoint(connection, checkpoint):
