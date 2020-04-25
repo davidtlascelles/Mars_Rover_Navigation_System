@@ -23,55 +23,81 @@ def unwrap_topology():
 def cardinal(direction):
     if direction["theta"] == "N":
         heading = 2
-    if direction["theta"] == "NW":
+    elif direction["theta"] == "NW":
         heading = 3
-    if direction["theta"] == "W":
+    elif direction["theta"] == "W":
         heading = 4
-    if direction["theta"] == "SW":
+    elif direction["theta"] == "SW":
         heading = 5
-    if direction["theta"] == "S":
+    elif direction["theta"] == "S":
         heading = 6
-    if direction["theta"] == "SE":
+    elif direction["theta"] == "SE":
         heading = 7
-    if direction["theta"] == "E":
+    elif direction["theta"] == "E":
         heading = 0
-    if direction["theta"] == "NE":
+    elif direction["theta"] == "NE":
         heading = 1
-
+    else:
+        return
     return heading
 
 
 def travel_direction(heading, start):
+    for i in range(2):
+        if i == 0:
+            point = safe_travel_options(start, heading)
+            if point is not None:
+                return point
+        else:
+            right = safe_travel_options(start, (heading + i) % 7)
+            left = safe_travel_options(start, (heading - i) % 7)
+
+            if right and left is not None:
+                if right <= left:
+                    point = right
+                if left < right:
+                    point = left
+                return point
+            elif right is not None and left is None:
+                return right
+            elif left is not None and right is None:
+                return left
+
+        if i == 2:
+            print("backtracking")
+
+
+def safe_travel_options(start, direction):
     matrix = unwrap_topology()
     MAX_DELTA_Z = .2
 
     #              E  0   NE  1    N  2    NW  3    W   4    SW   5    S   6   SE   7
     transforms = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
 
-    for i in range(2):
-        if i == 0:
-            new_x = start[0] + transforms[heading][0]
-            new_y = start[1] + transforms[heading][1]
-            next_move = (new_x, new_y, matrix[new_x][new_y])
-            if abs(next_move[2] - start[2]) < MAX_DELTA_Z:
-                return next_move
+    new_x = start[0] + transforms[direction][0]
+    new_y = start[1] + transforms[direction][1]
+    next_move = (new_x, new_y, matrix[new_x][new_y])
 
-        new_x_right = start[0] + transforms[(heading + i) % 7][0]
-        new_y_right = start[1] + transforms[(heading + i) % 7][1]
-        next_move_right = (new_x_right, new_y_right, matrix[new_x_right][new_y_right])
+    if abs(next_move[2] - start[2]) < MAX_DELTA_Z:
+        return next_move
 
-        new_x_left = start[0] + transforms[(heading - i) % 7][0]
-        new_y_left = start[1] + transforms[(heading - i) % 7][1]
-        next_move_left = (new_x_left, new_y_left, matrix[new_x_left][new_y_left])
 
-        right_delta_z = abs(next_move_right[2] - start[2])
-        left_delta_z = abs(next_move_left[2] - start[2])
-        if right_delta_z <= left_delta_z and right_delta_z < MAX_DELTA_Z:
-            return next_move_right
-        elif left_delta_z < right_delta_z and left_delta_z < MAX_DELTA_Z:
-            return next_move_left
-        else:
-            print("backtracking")
+def safe_travel_options_counter(start):
+    matrix = unwrap_topology()
+    MAX_DELTA_Z = .2
+
+    #              E  0   NE  1    N  2    NW  3    W   4    SW   5    S   6   SE   7
+    transforms = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
+
+    count = 0
+    for i, direction in enumerate(transforms):
+        check_x = start[0] + transforms[i][0]
+        check_y = start[1] + transforms[i][1]
+        check_move = (check_x, check_y, matrix[check_x][check_y])
+
+        if abs(check_move[2] - start[2]) < MAX_DELTA_Z:
+            count += 1
+    return count
 
 
 def pathfind(start, end):
@@ -81,21 +107,31 @@ def pathfind(start, end):
     vector = Vector_Handler.transform(start, end)
     heading = cardinal(Vector_Handler.angle(vector, True, True))
 
-    travel = travel_direction(heading, start)
-    new_point = travel[0], travel[1], travel[2]
-    print(new_point)
+    new_distance = Vector_Handler.magnitude(vector)
+    new_direction = None
+    new_point = end
 
-    new_vector = Vector_Handler.transform(new_point, end)
-    new_direction = Vector_Handler.angle(new_vector, True, True)["theta"]
-    new_distance = Vector_Handler.magnitude(new_vector)
+    if new_distance > 1.5:
+        travel = travel_direction(heading, start)
+        new_point = (travel[0], travel[1], travel[2])
+        new_vector = Vector_Handler.transform(new_point, end)
+        new_direction = Vector_Handler.angle(new_vector, True, True)["theta"]
+        new_distance = Vector_Handler.magnitude(new_vector)
 
     db_point = (new_point[0], new_point[1], new_point[2], new_distance, new_direction)
-    Database.create_waypoint(conn, db_point)
 
+    with conn:
+        Database.create_waypoint(conn, db_point)
+
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM checkpoints;")
+        if cursor.fetchall()[0][0] == 0:
+            db_checkpoint = (new_point[0], new_point[1], safe_travel_options_counter(new_point))
+            Database.create_checkpoint(conn, db_checkpoint)
+
+    if new_point == end:
+        return
     pathfind(travel, end)
-
-
-
 
 
 location = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
@@ -104,7 +140,8 @@ database = os.path.join(location, name)
 
 conn = Database.create_connection(database)
 
-rover_position = [1413, 638, 1097.26]
-destination = [749, 574, 1117.56]
+rover_position = (1413, 638, 1097.26)
+destination = (1402, 637, 1097.7)
+# destination = (749, 574, 1117.56)
 
 pathfind(rover_position, destination)

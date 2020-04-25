@@ -43,7 +43,9 @@ def angle(angle_vector, theta_angle, cardinal):
         x = angle_vector[0]
         y = angle_vector[1]
 
-        if x < 0 and y == 0:
+        if x == 0 and y == 0:
+            angle_dict["theta"] = None
+        elif x < 0 and y == 0:
             angle_dict["theta"] = (numpy.pi * 3 / 2)
         elif x > 0 and y == 0:
             angle_dict["theta"] = (numpy.pi / 2)
@@ -62,6 +64,8 @@ def angle(angle_vector, theta_angle, cardinal):
 
         if cardinal is True:
             theta = angle_dict["theta"]
+            if theta is None:
+                return angle_dict
             if NNE > theta > NEE:
                 angle_dict["theta"] = "NE"
             if NNW > theta > NNE:
