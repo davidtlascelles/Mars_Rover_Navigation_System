@@ -6,95 +6,104 @@ from sqlite3 import Error
 def create_connection(db_file):
     """ create a database connection to the SQLite database
         specified by db_file
-    :param db_file: database file
+    :param db_file: database filepath
     :return: Connection object or None
     """
-    conn = None
+    connection = None
     try:
-        conn = sqlite3.connect(db_file)
-        return conn
+        connection = sqlite3.connect(db_file)
+        return connection
     except Error as e:
         print(e)
 
-    return conn
+    return connection
 
 
-def create_table(conn, create_table_sql):
+def create_table(connection, create_table_sql):
     """ create a table from the create_table_sql statement
-    :param conn: Connection object
+    :param connection: Connection object
     :param create_table_sql: a CREATE TABLE statement
-    :return:
     """
     try:
-        c = conn.cursor()
+        c = connection.cursor()
         c.execute(create_table_sql)
     except Error as e:
         print(e)
 
 
-def create_waypoint(conn, waypoint):
+def create_waypoint(connection, waypoint):
     """
-    Create a new waypoint into the waypoints table
-    :param conn:
-    :param waypoint:
+    Create a new waypoint in the waypoints table
+    :param connection: Connection object
+    :param waypoint: Waypoint tuple (x, y, z, distance, heading)
     :return: waypoint id
     """
     sql = ''' INSERT INTO waypoints(x, y, z, distance, heading)
               VALUES(?,?,?,?,?) '''
-    cur = conn.cursor()
+    cur = connection.cursor()
     cur.execute(sql, waypoint)
     return cur.lastrowid
 
 
-def create_checkpoint(conn, checkpoint):
+def create_checkpoint(connection, checkpoint):
     """
-    Create a new task
-    :param conn:
-    :param checkpoint:
-    :return:
+    Create a new checkpoint in the checkpoints table
+    :param connection: Connection object
+    :param checkpoint: Checkpoint tuple (waypoint_x, waypoint_y, safe_options)
+    :return: checkpoint id
     """
-
     sql = ''' INSERT INTO checkpoints(waypoint_x, waypoint_y, safe_options)
               VALUES(?,?,?) '''
-    cur = conn.cursor()
+    cur = connection.cursor()
     cur.execute(sql, checkpoint)
     return cur.lastrowid
 
 
+def create_tables(connection):
+    """
+    Create tables
+    :param connection: Connection object
+    """
+    sql_create_waypoints_table = """ CREATE TABLE IF NOT EXISTS waypoints(
+                                            x INTEGER,
+                                            y INTEGER, 
+                                            z REAL,
+                                            distance REAL,
+                                            heading TEXT,
+                                            PRIMARY KEY(x,y)
+                                    ); """
+
+    sql_create_checkpoints_table = """ CREATE TABLE IF NOT EXISTS checkpoints(
+                                            checkpoint_id integer PRIMARY KEY, waypoint_x INTEGER,
+                                            waypoint_y INTEGER,
+                                            safe_options INTEGER,
+                                            FOREIGN KEY (waypoint_x, waypoint_y) 
+                                                REFERENCES waypoints (x, y)
+
+                                    );"""
+    # create tables
+    if connection is not None:
+        # create waypoints table
+        create_table(conn, sql_create_waypoints_table)
+
+        # create checkpoints table
+        create_table(conn, sql_create_checkpoints_table)
+    else:
+        print("Error - Cannot create the database connection.")
+
+
 location = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 name = "waypoint.db"
-database = os.path.join(location, name)
-
-sql_create_waypoints_table = """ CREATE TABLE IF NOT EXISTS waypoints(
-                                        x INTEGER,
-                                        y INTEGER, 
-                                        z REAL,
-                                        distance REAL,
-                                        heading TEXT,
-                                        PRIMARY KEY(x,y)
-                                ); """
-
-sql_create_checkpoints_table = """ CREATE TABLE IF NOT EXISTS checkpoints(
-                                        checkpoint_id integer PRIMARY KEY, waypoint_x INTEGER,
-                                        waypoint_y INTEGER,
-                                        safe_options INTEGER,
-                                        FOREIGN KEY (waypoint_x, waypoint_y) 
-                                            REFERENCES waypoints (x, y)
-                                
-                                );"""
+database_filepath = os.path.join(location, name)
 
 # create a database connection
-conn = create_connection(database)
+conn = create_connection(database_filepath)
 
-# create tables
-if conn is not None:
-    # create waypoints table
-    create_table(conn, sql_create_waypoints_table)
+# creates tables if they don't exist
+create_tables(database_filepath)
 
-    # create checkpoints table
-    create_table(conn, sql_create_checkpoints_table)
-
-    #point = (15, 30, 10.5, 600.2, 'NE')
-    #waypoint_id = create_waypoint(conn, point)
-else:
-    print("Error! cannot create the database connection.")
+# To add a value to a table, do this:
+#    connection = Database.create_connection(database)  // Create a connection object
+#
+#    with connection:                                   // Use create_waypoint() or create_checkpoint()
+#        Database.create_waypoint(connection, db_point) // parameters are defined in the docstrings
