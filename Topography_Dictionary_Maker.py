@@ -1,6 +1,8 @@
 import os
-import statistics
-import json
+
+# This program has mostly been used by me just trying
+# to wrangle the LIDAR data into something I can work with.
+# You can probably just ignore this.
 
 location = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
