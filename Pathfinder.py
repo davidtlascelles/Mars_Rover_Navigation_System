@@ -35,7 +35,6 @@ def travel_direction(heading, start):
         if i == 0:
             point = safe_travel_options(start, heading)
             if point is not None:
-                print(point)
                 return point
         else:
             right = safe_travel_options(start, (heading + i) % 7)
@@ -46,13 +45,10 @@ def travel_direction(heading, start):
                     point = right
                 if left < right:
                     point = left
-                print(point)
                 return point
             elif right is not None and left is None:
-                print(right)
                 return right
             elif left is not None and right is None:
-                print(left)
                 return left
 
     print("backtracking")
@@ -105,7 +101,7 @@ def safe_travel_options_counter(start):
     return count
 
 
-def pathfind(start, end):
+def pathfind(start, end, connection):
     if start == end:
         return
 
@@ -117,8 +113,9 @@ def pathfind(start, end):
     new_point = end
 
     if new_distance > 1.5:
-        travel = travel_direction(heading, start)
-        new_point = (travel[0], travel[1], travel[2])
+        new_point = travel_direction(heading, start)
+        print(new_point)
+
         new_vector = Vector_Handler.make_vector(new_point, end)
         new_direction = Vector_Handler.cardinal_heading(new_vector)
         new_distance = Vector_Handler.magnitude(new_vector)
@@ -128,15 +125,48 @@ def pathfind(start, end):
     with connection:
         Database.create_waypoint(connection, db_point)
 
-        cursor = connection.cursor()
-        cursor.execute("SELECT COUNT(*) FROM checkpoints;")
-        if cursor.fetchall()[0][0] == 0:
-            db_checkpoint = (new_point[0], new_point[1], safe_travel_options_counter(new_point))
-            Database.create_checkpoint(connection, db_checkpoint)
+        checkpoint(new_point, connection)
 
     if new_point == end:
         return
-    pathfind(travel, end)
+
+    pathfind(new_point, end, connection)
+
+
+def checkpoint(point, connection):
+    """
+    Logs checkpoints if defined minimum distance and safe topography requirement is met
+    :param point: Current location of rover (tuple)
+    :param connection: Connection object
+    """
+    MIN_DISTANCE = 10
+    SAFE_TOPOGRAPHY = 4
+
+    # Checks if checkpoints database is empty for first checkpoint
+    if Database.table_size(connection, 'checkpoints') == 0:
+        db_checkpoint = (point[0], point[1], safe_travel_options_counter(point))
+        Database.create_checkpoint(connection, db_checkpoint)
+    else:
+        # Find distance since last checkpoint
+        count = Database.table_size(connection, 'checkpoints')
+        last_checkpoint = Database.select_point_by_key(connection, count, 'checkpoints')
+
+        x = last_checkpoint[1]
+        y = last_checkpoint[2]
+        z = Database.select_point_by_key(connection, (x, y), 'waypoints')[3]
+
+        last_checkpoint_coordinate = (x, y, z)
+        vector = Vector_Handler.make_vector(last_checkpoint_coordinate, point)
+        distance_between_checkpoints = Vector_Handler.magnitude(vector)
+
+        # Finds how many safe travel options there are at the current coordinate
+        safe_options = safe_travel_options_counter(point)
+
+        # If checkpoint is sufficiently far from last checkpoint and the area is relatively
+        # flat (many travel options are available), log checkpoint to database
+        if distance_between_checkpoints > MIN_DISTANCE and safe_options >= SAFE_TOPOGRAPHY:
+            db_checkpoint = (point[0], point[1], safe_travel_options_counter(point))
+            Database.create_checkpoint(connection, db_checkpoint)
 
 
 # Finds current directory
@@ -147,7 +177,7 @@ file_name = "waypoint.db"
 database_filepath = os.path.join(location, file_name)
 
 # Establishes a connection to the DB, creates a connection object
-connection = Database.create_connection(database_filepath)
+conn = Database.create_connection(database_filepath)
 
 rover_position = (1068, 873, 1101.01)
 destination = (862, 771, 1109.11)
@@ -155,7 +185,7 @@ destination = (862, 771, 1109.11)
 # destination = (749, 574, 1117.56)
 
 # Clears tables from database file for testing new routes
-Database.delete_all_rows(connection, 'waypoints')
-Database.delete_all_rows(connection, 'checkpoints')
+Database.delete_all_rows(conn, 'waypoints')
+Database.delete_all_rows(conn, 'checkpoints')
 
-pathfind(rover_position, destination)
+pathfind(rover_position, destination, conn)

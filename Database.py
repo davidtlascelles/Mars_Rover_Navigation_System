@@ -50,10 +50,16 @@ def create_waypoint(connection, waypoint):
     :param waypoint: Waypoint tuple (x, y, z, distance, heading)
     :return: waypoint id
     """
-    sql = ''' INSERT INTO waypoints(x, y, z, distance, heading)
-              VALUES(?,?,?,?,?) '''
+    waypoint_list = list(waypoint)
+    key = compound_key(waypoint)
+    waypoint_list.insert(0, key)
+
+    keyed_waypoint = tuple(waypoint_list)
+
+    sql = ''' INSERT INTO waypoints(waypoint_id, x, y, z, distance, heading)
+              VALUES(?,?,?,?,?,?) '''
     cur = connection.cursor()
-    cur.execute(sql, waypoint)
+    cur.execute(sql, keyed_waypoint)
     return cur.lastrowid
 
 
@@ -84,22 +90,69 @@ def create_checkpoint(connection, checkpoint):
     return cur.lastrowid
 
 
+def select_point_by_key(connection, key, table):
+    """
+    Query points by key and table
+    :param connection: Connection object
+    :param key: x, y coordinate pair
+    :param table: String defining table name to delete point from
+    :return: row of data
+    """
+    if table == 'checkpoints':
+        collumn = 'checkpoint_id'
+    elif table == 'waypoints':
+        key = compound_key(key)
+        collumn = 'waypoint_id'
+
+    cur = connection.cursor()
+    cur.execute(f"SELECT * FROM {table} WHERE {collumn}=?", (int(key),))
+
+    row = cur.fetchone()
+
+    return row
+
+
+def compound_key(key):
+    """
+    Creates compound key from x and y coordinates
+    :param key: x, y coordinate tuple
+    :return: integer concatenated key
+    """
+    zeros = len(str(key[1]))
+    key = key[0] * (10 ** zeros) + key[1]
+
+    return key
+
+def table_size(connection, table):
+    """
+    Finds number of rows in table defined by table argument
+    :param connection: Connection object
+    :param table: String defining table name to find size of
+    :return: number of rows in table (Int)
+    """
+    sql = f''' SELECT COUNT(*) FROM {table}'''
+    cur = connection.cursor()
+    cur.execute(sql)
+    return cur.fetchone()[0]
+
+
 def create_tables(connection):
     """
     Create tables
     :param connection: Connection object
     """
     sql_create_waypoints_table = """ CREATE TABLE IF NOT EXISTS waypoints(
+                                            waypoint_id INTEGER PRIMARY KEY,
                                             x INTEGER,
                                             y INTEGER, 
                                             z REAL,
                                             distance REAL,
-                                            heading TEXT,
-                                            PRIMARY KEY(x,y)
+                                            heading TEXT
                                     ); """
 
     sql_create_checkpoints_table = """ CREATE TABLE IF NOT EXISTS checkpoints(
-                                            checkpoint_id integer PRIMARY KEY, waypoint_x INTEGER,
+                                            checkpoint_id INTEGER PRIMARY KEY, 
+                                            waypoint_x INTEGER,
                                             waypoint_y INTEGER,
                                             safe_options INTEGER,
                                             FOREIGN KEY (waypoint_x, waypoint_y) 
