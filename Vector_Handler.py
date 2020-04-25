@@ -78,5 +78,3 @@ def cardinal_heading(vector):
         return 7  # SE
     if NEE > heading or heading > SEE:
         return 0  # E
-
-
