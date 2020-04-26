@@ -24,24 +24,25 @@ def unwrap_topology():
     return topography_map
 
 
-def travel_direction(connection, heading, start):
+def travel_direction(db, heading, start):
     """
     Finds a valid direction to travel
-    :param connection: Connection object
+    :param db: Database object
     :param heading: Cardinal direction towards target (integer)
     :param start: Current coordinate
     :return: Next coordinate
     """
     i = 0
+    point = None
     while i < 4:
         if i == 0:
-            point = safe_travel_options(connection, start, heading)
+            point = safe_travel_options(db, start, heading)
             i += 1
             if point is not None:
                 return point
         elif i < 4:
-            right = safe_travel_options(connection, start, (heading + i) % 7)
-            left = safe_travel_options(connection, start, (heading - i) % 7)
+            right = safe_travel_options(db, start, (heading + i) % 7)
+            left = safe_travel_options(db, start, (heading - i) % 7)
 
             i += 1
             if right and left is not None:
@@ -55,17 +56,17 @@ def travel_direction(connection, heading, start):
             elif left is not None and right is None:
                 return left
             if i == 4:
-                backtrack(connection, start)
-                count = Database.table_size(connection, 'checkpoints')
-                checkpoint_coordinate = Database.select_point_by_key(connection, count, 'checkpoints')
-                return travel_direction(connection, heading, checkpoint_coordinate)
+                backtrack(db, start)
+                count = db.get_table_size('checkpoints')
+                checkpoint_coordinate = db.select_point_by_key(count, 'checkpoints')
+                return travel_direction(db, heading, checkpoint_coordinate)
 
 
-def safe_travel_options(connection, start, direction):
+def safe_travel_options(db, start, direction):
     """
     Finds a safe gradient in adjacent cells defined by direction parameter.
     MAX_DELTA_Z defines the acceptable height change
-    :param connection: Connection object
+    :param db: Database object
     :param start: Current coordinate
     :param direction: Cardinal direction (integer)
     :return: Next coordinate
@@ -82,7 +83,7 @@ def safe_travel_options(connection, start, direction):
     next_move = (new_x, new_y, matrix[new_x][new_y])
 
     # Checks if path has been visited
-    path_is_new = new_path(connection, next_move)
+    path_is_new = new_path(db, next_move)
 
     # finds absolute value of height difference to next cell
     if abs(next_move[2] - start[2]) < MAX_DELTA_Z and path_is_new:
@@ -132,7 +133,7 @@ def safe_travel_options_counter(start, direction):
     return count
 
 
-def pathfind(start, end, connection, count):
+def pathfind(db, start, end, count):
     vector = Vector_Handler.make_vector(start, end)
     heading = Vector_Handler.cardinal_heading(vector)
 
@@ -141,8 +142,8 @@ def pathfind(start, end, connection, count):
     new_point = end
 
     if new_distance > 1.5:
-        new_point = travel_direction(connection, heading, start)
-        print(f"Traveling, {new_point}")
+        new_point = travel_direction(db, heading, start)
+        #print(f"Traveling, {new_point}")
 
         new_vector = Vector_Handler.make_vector(new_point, end)
         new_direction = Vector_Handler.cardinal_heading(new_vector)
@@ -151,21 +152,19 @@ def pathfind(start, end, connection, count):
     count += 1
     db_point = (new_point[0], new_point[1], new_point[2], new_distance, new_direction, count)
 
-    with connection:
-        Database.create_waypoint(connection, db_point)
-
-        checkpoint(connection, new_point, heading)
+    db.create_waypoint(db_point)
+    checkpoint(db, new_point, heading)
 
     if new_point == end:
         return
 
-    pathfind(new_point, end, connection, count)
+    pathfind(db, new_point, end, count)
 
 
-def checkpoint(connection, point, heading):
+def checkpoint(db, point, heading):
     """
     Logs checkpoints if defined minimum distance and safe topography requirement is met
-    :param connection: Connection object
+    :param db: Database object
     :param point: Current location of rover (tuple)
     :param heading: Cardinal direction heading (integer)
     """
@@ -173,13 +172,13 @@ def checkpoint(connection, point, heading):
     SAFE_TOPOGRAPHY = 4
 
     # Checks if checkpoints database is empty for first checkpoint
-    if Database.table_size(connection, 'checkpoints') == 0:
+    if db.get_table_size('checkpoints') == 0:
         db_checkpoint = (point[0], point[1], safe_travel_options_counter(point, heading))
-        Database.create_checkpoint(connection, db_checkpoint)
+        db.create_checkpoint(db_checkpoint)
     else:
         # Find distance since last checkpoint
-        count = Database.table_size(connection, 'checkpoints')
-        last_checkpoint_coordinate = Database.select_point_by_key(connection, count, 'checkpoints')
+        count = db.get_table_size('checkpoints')
+        last_checkpoint_coordinate = db.select_point_by_key(count, 'checkpoints')
         vector = Vector_Handler.make_vector(last_checkpoint_coordinate, point)
         distance_between_checkpoints = Vector_Handler.magnitude(vector)
 
@@ -191,90 +190,86 @@ def checkpoint(connection, point, heading):
             # flat (many travel options are available), log checkpoint to database
             if safe_options >= SAFE_TOPOGRAPHY:
                 db_checkpoint = (point[0], point[1], safe_options)
-                Database.create_checkpoint(connection, db_checkpoint)
+                db.create_checkpoint(db_checkpoint)
 
 
-def backtrack(connection, point):
+def backtrack(db, point):
     # Find key of last checkpoint
-    count = Database.table_size(connection, 'checkpoints')
+    count = db.get_table_size('checkpoints')
     # Look up checkpoint coordinates with key
-    last_checkpoint_coordinate = Database.select_point_by_key(connection, count, 'checkpoints')
+    last_checkpoint_coordinate = db.select_point_by_key(count, 'checkpoints')
     # Loop up number of safe options at last checkpoint
-    safe_options = Database.select_point_by_key(connection, count, 'checkpoints', True)[3]
+    safe_options = db.select_point_by_key(count, 'checkpoints', True)[3]
 
     if point == last_checkpoint_coordinate:
-        print("Returned to checkpoint", last_checkpoint_coordinate)
-        Database.delete_point(connection, count, 'checkpoints')
+        #print("Returned to checkpoint", last_checkpoint_coordinate)
+        db.delete_point(count, 'checkpoints')
         return
 
     # Determine if checkpoint is exhausted of safe options
     if safe_options < 2:
         # Delete last checkpoint from database
-        Database.delete_point(connection, count, 'checkpoints')
+        db.delete_point(count, 'checkpoints')
         # Set last checkpoint as invalid coordinates
         Global_Map[last_checkpoint_coordinate[0]][last_checkpoint_coordinate[1]] = float('inf')
 
         # Find next checkpoint
-        count = Database.table_size(connection, 'checkpoints')
-        last_checkpoint_coordinate = Database.select_point_by_key(connection, count, 'checkpoints')
-        safe_options = Database.select_point_by_key(connection, count, 'checkpoints', True)[3]
+        count = db.get_table_size('checkpoints')
+        last_checkpoint_coordinate = db.select_point_by_key(count, 'checkpoints')
+        safe_options = db.select_point_by_key(count, 'checkpoints', True)[3]
 
-    point = backtrack_segment(connection, point, last_checkpoint_coordinate)
+    backtrack_segment(db, point, last_checkpoint_coordinate)
 
-    Database.update_value(connection, count, 'checkpoints', 'safe_options', safe_options - 1)
+    db.update_value(count, 'checkpoints', 'safe_options', safe_options - 1)
     return
 
 
-def backtrack_segment(connection, current, end):
+def backtrack_segment(db, current, end):
     # Backtracking logic
     # Find visited number of current coordinate
     if current == end:
         return end
 
-    visited_count = Database.get_visited_count(connection, current)
+    visited_count = db.get_visited_count(current)
 
     i = 1
     # Look for next lowest visited number
-    next_point = Database.select_point_by_visited(connection, visited_count - i)
+    next_point = db.select_point_by_visited(visited_count - i)
     while next_point is None:
         i += 1
-        next_point = Database.select_point_by_visited(connection, visited_count - i)
+        next_point = db.select_point_by_visited(visited_count - i)
 
-    print(f"Backtracking to, {next_point}")
+    #print(f"Backtracking to, {next_point}")
 
-    Database.delete_point(connection, current, 'waypoints')
+    db.delete_point(current, 'waypoints')
     Global_Map[current[0]][current[1]] = float('inf')
 
-    backtrack_segment(connection, next_point, end)
+    backtrack_segment(db, next_point, end)
 
 
-def new_path(connection, point):
-    if Database.select_point_by_key(connection, point, 'waypoints') is None:
+def new_path(db, point):
+    if db.select_point_by_key(point, 'waypoints') is None:
         return True
     return False
 
 
 # Finds current directory
 location = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
-# name of DB file
-file_name = "waypoint.db"
-# creates filepath from current directory and file name
-database_filepath = os.path.join(location, file_name)
 
 # Opens a global topology map to be modified by backtrack function
 Global_Map = unwrap_topology()
 
 # Establishes a connection to the DB, creates a connection object
-conn = Database.create_connection(database_filepath)
+Database_object = Database.Database()
 
-
-#rover_position = (1068, 873, 1101.01) # Pathfind failure
+# rover_position = (1068, 873, 1101.01) # Pathfind failure
 rover_position = (1328, 823, 1101.89)
 destination = (749, 574, 1117.56)
 
 # Clears tables from database file for testing new routes
-Database.delete_all_rows(conn, 'waypoints')
-Database.delete_all_rows(conn, 'checkpoints')
+Database_object.delete_all_rows('waypoints')
+Database_object.delete_all_rows('checkpoints')
 
 c = 0
-pathfind(rover_position, destination, conn, c)
+pathfind(Database_object, rover_position, destination, c)
+
