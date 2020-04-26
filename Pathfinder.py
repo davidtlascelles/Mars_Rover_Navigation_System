@@ -133,11 +133,11 @@ def safe_travel_options_counter(start, direction):
     return count
 
 
-def pathfind(db, start, end, count):
-    vector = Vector_Handler.make_vector(start, end)
-    heading = Vector_Handler.cardinal_heading(vector)
+def pathfind(db, v, start, end, count):
+    vector = v.make_vector(start, end)
+    heading = v.heading(vector)
 
-    new_distance = Vector_Handler.magnitude(vector)
+    new_distance = v.magnitude(vector)
     new_direction = None
     new_point = end
 
@@ -145,23 +145,23 @@ def pathfind(db, start, end, count):
         new_point = travel_direction(db, heading, start)
         #print(f"Traveling, {new_point}")
 
-        new_vector = Vector_Handler.make_vector(new_point, end)
-        new_direction = Vector_Handler.cardinal_heading(new_vector)
-        new_distance = Vector_Handler.magnitude(new_vector)
+        new_vector = v.make_vector(new_point, end)
+        new_direction = v.heading(new_vector)
+        new_distance = v.magnitude(new_vector)
 
     count += 1
     db_point = (new_point[0], new_point[1], new_point[2], new_distance, new_direction, count)
 
     db.create_waypoint(db_point)
-    checkpoint(db, new_point, heading)
+    checkpoint(db, v, new_point, heading)
 
     if new_point == end:
         return
 
-    pathfind(db, new_point, end, count)
+    pathfind(db, v, new_point, end, count)
 
 
-def checkpoint(db, point, heading):
+def checkpoint(db, v, point, heading):
     """
     Logs checkpoints if defined minimum distance and safe topography requirement is met
     :param db: Database object
@@ -179,8 +179,8 @@ def checkpoint(db, point, heading):
         # Find distance since last checkpoint
         count = db.get_table_size('checkpoints')
         last_checkpoint_coordinate = db.select_point_by_key(count, 'checkpoints')
-        vector = Vector_Handler.make_vector(last_checkpoint_coordinate, point)
-        distance_between_checkpoints = Vector_Handler.magnitude(vector)
+        vector = v.make_vector(last_checkpoint_coordinate, point)
+        distance_between_checkpoints = v.magnitude(vector)
 
         if distance_between_checkpoints > MIN_DISTANCE:
             # Finds how many safe travel options there are at the current coordinate
@@ -261,6 +261,7 @@ Global_Map = unwrap_topology()
 
 # Establishes a connection to the DB, creates a connection object
 Database_object = Database.Database()
+Vector_object = Vector_Handler.VectorHandler()
 
 # rover_position = (1068, 873, 1101.01) # Pathfind failure
 rover_position = (1328, 823, 1101.89)
@@ -271,5 +272,5 @@ Database_object.delete_all_rows('waypoints')
 Database_object.delete_all_rows('checkpoints')
 
 c = 0
-pathfind(Database_object, rover_position, destination, c)
+pathfind(Database_object, Vector_object, rover_position, destination, c)
 
