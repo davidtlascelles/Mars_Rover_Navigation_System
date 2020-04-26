@@ -24,6 +24,10 @@ System functions based on lucidchart diagrams
 - Comment Pathfinder.py
     ** Lots of messy code. Needs code comments
 
+- Pathfind system probably needs a method to delete/archive waypoints after driving succesfuly through them
+
+- Need some way of determining current location
+
 ✔ Receive coordinates
     Program that interfaces with the comms to recieve coordinate points from Mission Control or Orbiting MPS
     Destination Coordinates: 749, 574, 1117.56
