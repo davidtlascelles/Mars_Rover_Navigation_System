@@ -1,28 +1,29 @@
 class PathFinder:
 
     def __init__(self):
+        self.new_waypoint = None
+        self.current_coordinate = None
         self.topography = None
         self.visited_count = 0
 
-    def travel_direction(self, db, heading, start):
+    def travel_direction(self, db, heading):
         """
         Finds a valid direction to travel
         :param db: Database object
         :param heading: Cardinal direction towards target (integer)
-        :param start: Current coordinate
         :return: Next coordinate
         """
         i = 0
         point = None
         while i < 4:
             if i == 0:
-                point = self.safe_travel_options(db, start, heading)
+                point = self.safe_travel_options(db, heading)
                 i += 1
                 if point is not None:
                     return point
             elif i < 4:
-                right = self.safe_travel_options(db, start, (heading + i) % 7)
-                left = self.safe_travel_options(db, start, (heading - i) % 7)
+                right = self.safe_travel_options(db, (heading + i) % 7)
+                left = self.safe_travel_options(db, (heading - i) % 7)
 
                 i += 1
                 if right and left is not None:
@@ -36,17 +37,14 @@ class PathFinder:
                 elif left is not None and right is None:
                     return left
                 if i == 4:
-                    self.backtrack(db, start)
-                    count = db.get_table_size('checkpoints')
-                    checkpoint_coordinate = db.select_point_by_key(count, 'checkpoints')
-                    return self.travel_direction(db, heading, checkpoint_coordinate)
+                    self.backtrack(db)
+                    return self.travel_direction(db, heading)
 
-    def safe_travel_options(self, db, start, direction):
+    def safe_travel_options(self, db, direction):
         """
         Finds a safe gradient in adjacent cells defined by direction parameter.
         MAX_DELTA_Z defines the acceptable height change
         :param db: Database object
-        :param start: Current coordinate
         :param direction: Cardinal direction (integer)
         :return: Next coordinate
         """
@@ -57,21 +55,20 @@ class PathFinder:
         transforms = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
 
         # Uses direction parameter to choose which transform to do on the start coordinate
-        new_x = start[0] + transforms[direction][0]
-        new_y = start[1] + transforms[direction][1]
+        new_x = self.new_waypoint[0] + transforms[direction][0]
+        new_y = self.new_waypoint[1] + transforms[direction][1]
         next_move = (new_x, new_y, matrix[new_x][new_y])
 
         # Checks if path has been visited
         path_is_new = self.__new_path(db, next_move)
 
         # finds absolute value of height difference to next cell
-        if abs(next_move[2] - start[2]) < MAX_DELTA_Z and path_is_new:
+        if abs(next_move[2] - self.new_waypoint[2]) < MAX_DELTA_Z and path_is_new:
             return next_move
 
-    def safe_travel_options_counter(self, start, direction):
+    def safe_travel_options_counter(self, direction):
         """
         Finds how many safe directions of travel are available at a particular spot
-        :param start: Current coordinate (tuple)
         :param direction: Cardinal direction heading (integer)
         :return: Number of safe options up to 5
         """
@@ -85,32 +82,33 @@ class PathFinder:
         i = 0
         while i <= 3:
             if i == 0:
-                check_x = start[0] + transforms[direction][0]
-                check_y = start[1] + transforms[direction][1]
+                check_x = self.new_waypoint[0] + transforms[direction][0]
+                check_y = self.new_waypoint[1] + transforms[direction][1]
                 check_move = (check_x, check_y, matrix[check_x][check_y])
 
-                if abs(check_move[2] - start[2]) < MAX_DELTA_Z:
+                if abs(check_move[2] - self.new_waypoint[2]) < MAX_DELTA_Z:
                     count += 1
                 i += 1
             else:
-                check_x_left = start[0] + transforms[(direction + i) % 7][0]
-                check_y_left = start[1] + transforms[(direction + i) % 7][1]
+                check_x_left = self.new_waypoint[0] + transforms[(direction + i) % 7][0]
+                check_y_left = self.new_waypoint[1] + transforms[(direction + i) % 7][1]
                 check_move_left = (check_x_left, check_y_left, matrix[check_x_left][check_y_left])
 
-                if abs(check_move_left[2] - start[2]) < MAX_DELTA_Z:
+                if abs(check_move_left[2] - self.new_waypoint[2]) < MAX_DELTA_Z:
                     count += 1
 
-                check_x_right = start[0] + transforms[(direction - i) % 7][0]
-                check_y_right = start[1] + transforms[(direction - i) % 7][1]
+                check_x_right = self.new_waypoint[0] + transforms[(direction - i) % 7][0]
+                check_y_right = self.new_waypoint[1] + transforms[(direction - i) % 7][1]
                 check_move_right = (check_x_right, check_y_right, matrix[check_x_right][check_y_right])
 
-                if abs(check_move_right[2] - start[2]) < MAX_DELTA_Z:
+                if abs(check_move_right[2] - self.new_waypoint[2]) < MAX_DELTA_Z:
                     count += 1
                 i += 1
 
         return count
 
     def pathfind(self, db, v, start, end):
+        self.new_waypoint = start
         vector = v.make_vector(start, end)
         heading = v.heading(vector)
 
@@ -119,7 +117,7 @@ class PathFinder:
         new_point = end
 
         if new_distance > 1.5:
-            new_point = self.travel_direction(db, heading, start)
+            new_point = self.travel_direction(db, heading)
             # print(f"Traveling, {new_point}")
 
             new_vector = v.make_vector(new_point, end)
@@ -131,6 +129,7 @@ class PathFinder:
 
         db.create_waypoint(db_point)
         self.checkpoint(db, v, new_point, heading)
+        self.new_waypoint = new_point
 
         if new_point == end:
             return
@@ -150,7 +149,7 @@ class PathFinder:
 
         # Checks if checkpoints database is empty for first checkpoint
         if db.get_table_size('checkpoints') == 0:
-            db_checkpoint = (point[0], point[1], self.safe_travel_options_counter(point, heading))
+            db_checkpoint = (point[0], point[1], self.safe_travel_options_counter(heading))
             db.create_checkpoint(db_checkpoint)
         else:
             # Find distance since last checkpoint
@@ -161,7 +160,7 @@ class PathFinder:
 
             if distance_between_checkpoints > MIN_DISTANCE:
                 # Finds how many safe travel options there are at the current coordinate
-                safe_options = self.safe_travel_options_counter(point, heading)
+                safe_options = self.safe_travel_options_counter(heading)
 
                 # If checkpoint is sufficiently far from last checkpoint and the area is relatively
                 # flat (many travel options are available), log checkpoint to database
@@ -169,7 +168,7 @@ class PathFinder:
                     db_checkpoint = (point[0], point[1], safe_options)
                     db.create_checkpoint(db_checkpoint)
 
-    def backtrack(self, db, point):
+    def backtrack(self, db):
         # Find key of last checkpoint
         count = db.get_table_size('checkpoints')
         # Look up checkpoint coordinates with key
@@ -177,7 +176,7 @@ class PathFinder:
         # Loop up number of safe options at last checkpoint
         safe_options = db.select_point_by_key(count, 'checkpoints', True)[3]
 
-        if point == last_checkpoint_coordinate:
+        if self.new_waypoint == last_checkpoint_coordinate:
             # print("Returned to checkpoint", last_checkpoint_coordinate)
             db.delete_point(count, 'checkpoints')
             return
@@ -194,18 +193,18 @@ class PathFinder:
             last_checkpoint_coordinate = db.select_point_by_key(count, 'checkpoints')
             safe_options = db.select_point_by_key(count, 'checkpoints', True)[3]
 
-        self.__backtrack_segment(db, point, last_checkpoint_coordinate)
+        self.__backtrack_segment(db, last_checkpoint_coordinate)
 
         db.update_value(count, 'checkpoints', 'safe_options', safe_options - 1)
         return
 
-    def __backtrack_segment(self, db, current, end):
+    def __backtrack_segment(self, db, last_checkpoint):
         # Backtracking logic
         # Find visited number of current coordinate
-        if current == end:
-            return end
+        if self.new_waypoint == last_checkpoint:
+            return self.end_waypoint
 
-        visited_count = db.get_visited_count(current)
+        visited_count = db.get_visited_count(self.new_waypoint)
 
         i = 1
         # Look for next lowest visited number
@@ -216,10 +215,10 @@ class PathFinder:
 
         # print(f"Backtracking to, {next_point}")
 
-        db.delete_point(current, 'waypoints')
-        self.topography[current[0]][current[1]] = float('inf')
-
-        self.__backtrack_segment(db, next_point, end)
+        db.delete_point(self.new_waypoint, 'waypoints')
+        self.topography[self.new_waypoint[0]][self.new_waypoint[1]] = float('inf')
+        self.new_waypoint = next_point
+        self.__backtrack_segment(db, last_checkpoint)
 
     @staticmethod
     def __new_path(db, point):
