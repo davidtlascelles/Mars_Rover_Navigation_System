@@ -22,7 +22,7 @@ f = open("downlink.txt", "w")
 f.writelines(dst)
 f.close()
 
-time.sleep(5)
+time.sleep(2)
 rvr = ["navigation\n", "coordinates\n", "mps orbiter\n", "(1328, 823, 1101.89)"]
 f = open("downlink.txt", "w")
 f.writelines(rvr)

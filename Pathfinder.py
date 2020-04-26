@@ -202,7 +202,7 @@ class PathFinder:
         # Backtracking logic
         # Find visited number of current coordinate
         if self.new_waypoint == last_checkpoint:
-            return self.end_waypoint
+            return last_checkpoint
 
         visited_count = db.get_visited_count(self.new_waypoint)
 
