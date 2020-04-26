@@ -1,34 +1,8 @@
-import os
-
-
 class PathFinder:
 
     def __init__(self):
-        # Opens a global topology map to be modified by backtrack function
-        self.Global_Map = self.__unwrap_topology()
+        self.topography = None
         self.visited_count = 0
-
-    @staticmethod
-    def __unwrap_topology():
-        """
-        Reads coordinate_topography_map.txt and unwraps it into a 2D array of z values
-        :return: 2D array of z values
-        """
-        # Finds current directory
-        location = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
-        topography_map = []
-        with open(os.path.join(location, 'coordinate_topography_map.txt'), "r") as file:
-            line = file.readline()
-            split_line = line.split("], [")
-            for s_line in split_line:
-                s_line = s_line.rstrip(']')
-                s_line = s_line.lstrip('[')
-                unwrapped = s_line.split(',')
-                row = []
-                for z in unwrapped:
-                    row.append(float(z))
-                topography_map.append(row)
-        return topography_map
 
     def travel_direction(self, db, heading, start):
         """
@@ -76,7 +50,7 @@ class PathFinder:
         :param direction: Cardinal direction (integer)
         :return: Next coordinate
         """
-        matrix = self.Global_Map
+        matrix = self.topography
         MAX_DELTA_Z = .2
 
         #              E  0   NE  1    N  2    NW  3    W   4    SW   5    S   6   SE   7
@@ -101,7 +75,7 @@ class PathFinder:
         :param direction: Cardinal direction heading (integer)
         :return: Number of safe options up to 5
         """
-        matrix = self.Global_Map
+        matrix = self.topography
         MAX_DELTA_Z = .2
 
         #              E  0   NE  1    N  2    NW  3    W   4    SW   5    S   6   SE   7
@@ -213,7 +187,7 @@ class PathFinder:
             # Delete last checkpoint from database
             db.delete_point(count, 'checkpoints')
             # Set last checkpoint as invalid coordinates
-            self.Global_Map[last_checkpoint_coordinate[0]][last_checkpoint_coordinate[1]] = float('inf')
+            self.topography[last_checkpoint_coordinate[0]][last_checkpoint_coordinate[1]] = float('inf')
 
             # Find next checkpoint
             count = db.get_table_size('checkpoints')
@@ -243,7 +217,7 @@ class PathFinder:
         # print(f"Backtracking to, {next_point}")
 
         db.delete_point(current, 'waypoints')
-        self.Global_Map[current[0]][current[1]] = float('inf')
+        self.topography[current[0]][current[1]] = float('inf')
 
         self.__backtrack_segment(db, next_point, end)
 

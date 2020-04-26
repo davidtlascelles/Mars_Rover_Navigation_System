@@ -18,11 +18,15 @@ class VectorHandler:
         return mag
 
     @staticmethod
-    def make_vector(rover_coordinates, destination_coordinates):
+    def make_vector(rover_coordinates, destination_coordinates, two_dimensional=None):
         """Accepts two points and returns a vector"""
         transformed_destination = []
-        for index, element in enumerate(rover_coordinates):
-            transformed_destination.append(destination_coordinates[index] - rover_coordinates[index])
+        if two_dimensional is True:
+            transformed_destination.append(destination_coordinates[0] - rover_coordinates[0])
+            transformed_destination.append(destination_coordinates[1] - rover_coordinates[1])
+        else:
+            for index, element in enumerate(rover_coordinates):
+                transformed_destination.append(destination_coordinates[index] - rover_coordinates[index])
 
         return transformed_destination
 
