@@ -96,4 +96,7 @@ class CommunicationDispatch:
             "sender": "navigation",
             "payload": packet
         }
-        print("Sending uplink packet to comms:", payload)
+        if packet[0] == "SUCCESS" or packet[0] == "NOPATH":
+            print(packet[1])
+        else:
+            print("Sending uplink packet to comms:", payload)
