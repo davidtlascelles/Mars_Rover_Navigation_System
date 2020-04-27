@@ -26,7 +26,7 @@ System functions based on lucidchart diagrams
 ✔ Uplink status messages
     Program that interfaces with the comms to send status messages from the rover to mission control
     ** Communication_Dispatch has a method for uplinking status messages, but the system currently
-    does not generate any messages
+    does not generate any message
 
 ✔ Receive coordinates
     Program that interfaces with the comms to recieve coordinate points from Mission Control or Orbiting MPS
