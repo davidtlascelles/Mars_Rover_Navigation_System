@@ -1,10 +1,5 @@
 System functions based on lucidchart diagrams
 
-* Uplink status messages
-    Program that interfaces with the comms to send status messages from the rover to mission control
-    ** Communication_Dispatch has a method for uplinking status messages, but the system currently
-    does not generate any messages
-
 - Pass downrange vector to imaging system after route established (vector to next waypoint)
     ** Program that interfaces with the imaging system to pass a vector
 
@@ -27,6 +22,11 @@ System functions based on lucidchart diagrams
 - Pathfind system probably needs a method to delete/archive waypoints after driving succesfuly through them
 
 - Need some way of determining current location
+
+✔ Uplink status messages
+    Program that interfaces with the comms to send status messages from the rover to mission control
+    ** Communication_Dispatch has a method for uplinking status messages, but the system currently
+    does not generate any messages
 
 ✔ Receive coordinates
     Program that interfaces with the comms to recieve coordinate points from Mission Control or Orbiting MPS
