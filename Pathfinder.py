@@ -1,4 +1,5 @@
 import Vector_Handler
+import Communication_Dispatch
 
 
 class PathFinder:
@@ -18,7 +19,7 @@ class PathFinder:
 
         # Threshold for the number of adjacent coordinates with safe topography. (Max 7)
         # Lower numbers allow more uneven terrain at a checkpoint.
-        self.SAFE_TOPOGRAPHY_THRESHOLD = 6
+        self.SAFE_TOPOGRAPHY_THRESHOLD = 5
 
         # Used for checking points around a coordinate. Private variable. Do not change.
         #                     E  0   NE  1    N  2    NW  3    W   4    SW   5    S   6   SE   7
@@ -155,10 +156,17 @@ class PathFinder:
         self.new_waypoint = new_point
 
         if new_point == end:
+            comms = Communication_Dispatch.CommunicationDispatch()
+            comms.uplink_rover_status("PATH")
             return
 
-        # Loops, finds next waypoint
-        self.pathfind(db, new_point, end)
+        try:
+            # Loops, finds next waypoint
+            self.pathfind(db, new_point, end)
+        except:
+            comms = Communication_Dispatch.CommunicationDispatch()
+            comms.uplink_rover_status("NO_PATH")
+        return
 
     def checkpoint(self, db, point, heading):
         """
