@@ -3,7 +3,7 @@ import numpy
 
 class Vector:
 
-    def __init__(self, start, end, three_dimensional=True):
+    def __init__(self, start=0, end=0, three_dimensional=True):
         self.__starting_coordinate = start
         self.__ending_coordinate = end
 

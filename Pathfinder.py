@@ -73,8 +73,8 @@ class PathFinder:
         :return: Next coordinate
         """
         # Uses direction parameter to choose which transform to perform on the current waypoint
-        new_x = self.new_waypoint[0] + self.__transforms[direction][0]
-        new_y = self.new_waypoint[1] + self.__transforms[direction][1]
+        new_x = int(self.new_waypoint[0] + self.__transforms[direction][0])
+        new_y = int(self.new_waypoint[1] + self.__transforms[direction][1])
         next_move = (new_x, new_y, self.topography[new_x][new_y])
 
         # Checks if path has been visited to prevent backtracking loop
@@ -256,7 +256,7 @@ class PathFinder:
         # Delete waypoint from database
         db.delete_point(self.new_waypoint, 'waypoints')
         # Make waypoint unreachable during this pathfinding session
-        self.topography[self.new_waypoint[0]][self.new_waypoint[1]] = float('inf')
+        self.topography[int(self.new_waypoint[0])][int(self.new_waypoint[1])] = float('inf')
         # Keep backtracking
         self.new_waypoint = next_point
         self.__backtrack_segment(db, last_checkpoint)

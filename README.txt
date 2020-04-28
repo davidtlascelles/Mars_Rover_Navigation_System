@@ -17,7 +17,7 @@ DRIVE INTERFACE
         Drive System response: Success:
             Update current coordinates
             Trigger imaging interface
-            Archive traversed waypoint
+            Add traversed waypoint to database
             Update buffer with next vector
         Drive System response: Failure:
             Dump Buffer
