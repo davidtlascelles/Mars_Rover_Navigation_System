@@ -66,7 +66,6 @@ Database_object.delete_all_rows('checkpoints')
 
 # Begin pathfinding search for preliminary route
 Pathfinder_object.pathfind(Database_object, current_coordinates, destination)
-comms.uplink_rover_status("PATH")
 
 # Generate vectors between waypoints
     ## Probably a method in Vector Handler will work? Should vectors be stored in DB or passed right away to Drive?
