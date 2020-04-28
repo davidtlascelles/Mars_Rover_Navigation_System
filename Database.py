@@ -34,8 +34,10 @@ class Database:
         :param key: x, y coordinate tuple
         :return: integer concatenated key
         """
-        zeros = len(str(key[1]))
-        key = key[0] * (10 ** zeros) + key[1]
+        x_int = int(key[0])
+        y_int = int(key[1])
+        zeros = len(str(y_int))
+        key = x_int * (10 ** zeros) + y_int
 
         return key
 
@@ -56,8 +58,8 @@ class Database:
         """
         sql_create_waypoints_table = """ CREATE TABLE IF NOT EXISTS waypoints(
                                                 waypoint_id INTEGER PRIMARY KEY,
-                                                x INTEGER,
-                                                y INTEGER, 
+                                                x REAL,
+                                                y REAL, 
                                                 z REAL,
                                                 distance REAL,
                                                 heading TEXT,
@@ -66,9 +68,17 @@ class Database:
 
         sql_create_checkpoints_table = """ CREATE TABLE IF NOT EXISTS checkpoints(
                                                 checkpoint_id INTEGER PRIMARY KEY, 
-                                                waypoint_x INTEGER,
-                                                waypoint_y INTEGER,
+                                                waypoint_x REAL,
+                                                waypoint_y REAL,
                                                 safe_options INTEGER,
+                                                FOREIGN KEY (waypoint_x, waypoint_y) 
+                                                    REFERENCES waypoints (x, y)
+
+                                        );"""
+        sql_create_traversed_table = """ CREATE TABLE IF NOT EXISTS traversed(
+                                                traversed_id INTEGER PRIMARY KEY, 
+                                                waypoint_x REAL,
+                                                waypoint_y REAL,
                                                 FOREIGN KEY (waypoint_x, waypoint_y) 
                                                     REFERENCES waypoints (x, y)
 
@@ -81,6 +91,9 @@ class Database:
 
             # create checkpoints table
             self.create_table(sql_create_checkpoints_table)
+
+            # create traversed table
+            self.create_table(sql_create_traversed_table)
         else:
             print("Error - Cannot create the database connection.")
 
@@ -141,6 +154,26 @@ class Database:
             if connection:
                 connection.close()
 
+    def create_traversed(self, traversed):
+        """
+        Create a new traversed point in the traversed table
+        :param traversed: Traversed tuple (traversed_x, traversed_y)
+        """
+        connection = self.__create_connection()
+        sql = ''' INSERT INTO checkpoints(traversed_x, traversed_y)
+                              VALUES(?,?) '''
+        try:
+            cur = connection.cursor()
+            cur.execute(sql, traversed)
+            connection.commit()
+            cur.close()
+            return
+        except sqlite3.Error as e:
+            print(e)
+        finally:
+            if connection:
+                connection.close()
+
     def select_point_by_key(self, key, table, return_row=None):
         """
         Query points by key and table
@@ -151,6 +184,8 @@ class Database:
         """
         if table == 'checkpoints':
             column = 'checkpoint_id'
+        elif table == 'traversed':
+            column = 'traversed_id'
         else:
             table = 'waypoints'
             key = self.__compound_key(key)
@@ -197,8 +232,10 @@ class Database:
         return cur.fetchone()[0]
 
     def update_value(self, key, table, column, value):
-        if table == "checkpoints":
-            key_name = "checkpoint_id"
+        if table == 'checkpoints':
+            key_name = 'checkpoint_id'
+        elif table == 'traversed':
+            key_name = 'traversed_id'
         else:
             table = "waypoints"
             key_name = "waypoint_id"
@@ -230,6 +267,8 @@ class Database:
         """
         if table == 'checkpoints':
             column = 'checkpoint_id'
+        elif table == 'traversed':
+            column = 'traversed_id'
         else:
             table = 'waypoints'
             key = self.__compound_key(key)

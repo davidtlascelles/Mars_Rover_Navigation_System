@@ -19,10 +19,11 @@ class PathFinder:
     #                     E  0   NE  1    N  2    NW  3    W   4    SW   5    S   6   SE   7
     __transforms = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
 
+    topography = None
+
     def __init__(self):
         self.new_waypoint = None
         self.current_coordinate = None
-        self.topography = None
         self.visited_count = 0
 
     def travel_direction(self, db, heading):
@@ -218,7 +219,7 @@ class PathFinder:
             # Delete last checkpoint from database
             db.delete_point(count, 'checkpoints')
             # Set last checkpoint as invalid coordinates
-            self.topography[last_checkpoint_coordinate[0]][last_checkpoint_coordinate[1]] = float('inf')
+            self.topography[int(last_checkpoint_coordinate[0])][int(last_checkpoint_coordinate[1])] = float('inf')
 
             # Find next checkpoint
             count = db.get_table_size('checkpoints')
@@ -301,4 +302,9 @@ class PathFinder:
         :param threshold: Threshold of safe adjacent points (Max 7)
         """
         cls.SAFE_TOPOGRAPHY_THRESHOLD = threshold
+        return
+
+    @classmethod
+    def set_topography(cls, topo_map):
+        cls.topography = topo_map
         return
