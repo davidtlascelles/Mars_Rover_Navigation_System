@@ -3,12 +3,9 @@ System functions based on lucidchart diagrams
 - Pass downrange vector to imaging system after route established (vector to next waypoint)
     ** Program that interfaces with the imaging system to pass a vector
 
-- Create vectors along route from waypoint to waypoint
-    ** Program that finds vectors between waypoints in db. Perhaps stores vectors in another table.
-    Should be easy after waypoint db is created. Vector system ready
-
 - Pass vectors to drive system
     ** Program that interfaces with the drive system to pass direction vectors as rover's location updates.
+    Buffer of upcoming vectors kept in memory
 
 - Inject hazard avoidance waypoints into preliminary route waypoint database
     ** Program that interfaces with the hazard avoidance subsystem to recieve floating point waypoints around obstacles
@@ -20,8 +17,9 @@ System functions based on lucidchart diagrams
 
 - Need some way of determining current location
 
-✔ Comment Pathfinder.py
-    ** Lots of messy code. Needs code comments (One method still needs commenting)
+- Comms system should be able to accept a command from mission control to redefine pathfinding parameters (ie MAX_DELTA_Z)
+
+✔
 
 ✔ Uplink status messages
     Program that interfaces with the comms to send status messages from the rover to mission control
