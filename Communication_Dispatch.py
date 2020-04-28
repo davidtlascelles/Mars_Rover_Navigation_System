@@ -112,7 +112,7 @@ class CommunicationDispatch:
         message_dictionary = {
             "SUCCESS": "Mission Success; Destination reached successfully",
             "PATH": "Pathfind Success; route established",
-            "NOPATH": "Pathfind Failure; no route established",
+            "NO_PATH": "Pathfind Failure; no route established",
             "GO_DEST": "Downlink Success; destination coordinates received",
             "GO_POSITION": "Downlink Success; current coordinates received",
             "NO_COORDS": "Downlink Failure; no coordinates in packet",
