@@ -1,29 +1,37 @@
 System functions based on lucidchart diagrams
 
+IMAGING INTERFACE
 - Pass downrange vector to imaging system after route established (vector to next waypoint)
     ** Program that interfaces with the imaging system to pass a vector
 
-- Inject hazard avoidance waypoints into preliminary route waypoint database
-    ** Program that interfaces with the hazard avoidance subsystem to recieve floating point waypoints around obstacles
+- Get hazard avoidance waypoints response, inject it into preliminary route waypoint database
 
-- Drive interface archives waypoints and updates current coordinatesafter Drive System reports success.
 
+DRIVE INTERFACE
 - Drive interface needs to generate vectors to pass to Drive System
-    ** Program that interfaces with the drive system to pass direction vectors as rover's location updates.
-    Buffer of upcoming vectors kept in memory
-    Update buffer with next vector if Drive System reports success
-    Dump buffer if Drive System reports failure
+    Buffer of upcoming vectors kept in memory. Buffer capacity should be based on distance, not number of vectors.
+    When last waypoint is reached, stop generating vectors.
+
+- Drive interface loop:
+    While drive vector buffer is not empty, keep passing vectors
+        Drive System response: Success:
+            Update current coordinates
+            Trigger imaging interface
+            Archive traversed waypoint
+            Update buffer with next vector
+        Drive System response: Failure:
+            Dump Buffer
+            Comms message
+
+
 
 ✔ Uplink status messages
     Program that interfaces with the comms to send status messages from the rover to mission control
-    ** Communication_Dispatch has a method for uplinking status messages, but the system currently
-    does not generate any message
 
 ✔ Receive coordinates
     Program that interfaces with the comms to recieve coordinate points from Mission Control or Orbiting MPS
     Destination Coordinates: 749, 574, 1117.56
     Rover Current Coordinates: 1068, 873, 1101.01
-    ** Needs code comments
 
 ✔ Receive topographical data
     Program that interfaces with the comms to uplink a vector and downlink topographical data
@@ -45,7 +53,7 @@ System functions based on lucidchart diagrams
 
 - OPTIONAL
     Improve pathfinding algorithm in pathfind failure conditions. Maybe solve path in pieces to prevent
-    reaching recursion depth limit if stuck in problematic area. Current plan for this failure is to
+    reaching recursion depth limit if stuck in problematic area. Current solution for this failure is to
     uplink pathfind failure error.
 
 
