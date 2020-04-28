@@ -1,6 +1,7 @@
 import os
 import Pathfinder
 
+
 class CommunicationDispatch:
 
     def __init__(self):
