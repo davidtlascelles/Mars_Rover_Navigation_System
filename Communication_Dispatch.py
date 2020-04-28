@@ -8,6 +8,10 @@ class CommunicationDispatch:
         self.location = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
     def activity(self):
+        """
+        Listens for activity from Communications System
+        :return: Boolean indicator of activity
+        """
         file = None
         try:
             with open(os.path.join(self.location, 'downlink.txt'), "r") as file:
@@ -19,6 +23,10 @@ class CommunicationDispatch:
             return False
 
     def __downlink(self):
+        """
+        Opens downlink packet and verifies it is for the Navigation System
+        :return: Contents of packet as a list of lines
+        """
         with open(os.path.join(self.location, 'downlink.txt'), "r") as file:
             message = file.readlines()
             file.close()
@@ -27,26 +35,44 @@ class CommunicationDispatch:
                 return message
             return None
 
-    def downlink_coordinates(self, sender):
+    def downlink_coordinates(self, expected_sender):
+        """
+        Opens downlink packet and verifies it contains coordinates, then verifies the coordinates are
+        for the correct request (current coordinates vs destination coordinates)
+        :param expected_sender: string dictating which sender the packet should come from
+        :return: tuple coordinates
+        """
         message = self.__downlink()
         header_message_type = message[1].strip()
+        # Verify packet contains coordinates
         if header_message_type == 'coordinates':
             header_sender = message[2].strip()
-            if header_sender == sender:
+            # Verify packet is from correct sender
+            if header_sender == expected_sender:
                 payload = message[3]
                 payload = payload.rstrip(')')
                 payload = payload.lstrip('(')
                 piece = payload.split(',')
                 unwrapped_payload = (int(piece[0]), int(piece[1]), float(piece[2]))
-                if sender == "mission control":
-                    # unwrapped_payload = (749, 574, 1117.56) # destination
+                # Destination coordinates
+                if expected_sender == "mission control":
+                    # unwrapped_payload = (749, 574, 1117.56)
+                    self.uplink_rover_status("GO_DEST")
                     return unwrapped_payload
-                elif sender == "mps orbiter":
-                    # unwrapped_payload = (1328, 823, 1101.89) # rover_position
+                # Current coordinates
+                elif expected_sender == "mps orbiter":
+                    # unwrapped_payload = (1328, 823, 1101.89)
+                    self.uplink_rover_status("GO_POSITION")
                     return unwrapped_payload
-            return None
+            self.uplink_rover_status("WRONG_COORDS")
+        self.uplink_rover_status("NO_COORDS")
+        return None
 
     def downlink_topography(self):
+        """
+        Opens downlink packet and verifies it contains topographical information
+        :return: Topographical 2D array
+        """
         message = self.__downlink()
         message_type = message[1].strip()
 
@@ -66,37 +92,61 @@ class CommunicationDispatch:
                     row.append(float(z))
                 topography_map.append(row)
 
+            self.uplink_rover_status("GO_TOPO")
             return topography_map
+        self.uplink_rover_status("NO_TOPO")
         return None
 
-    def request_current_coordinates(self):
+    def get_current_coordinates(self):
+        """
+        Sends request to orbiter for current coordinates
+        """
         self.__uplink("mps orbiter", "Requesting Current Coordinates")
         return
 
     def uplink_rover_status(self, code):
+        """
+        Status reporting system for mission control
+        :param code: Status code string
+        """
         message_dictionary = {
+            "SUCCESS": "Mission Success; Destination reached successfully",
+            "PATH": "Pathfind Success; route established",
             "NOPATH": "Pathfind Failure; no route established",
-            "SUCCESS": "Destination reached successfully"
+            "GO_DEST": "Downlink Success; destination coordinates received",
+            "GO_POSITION": "Downlink Success; current coordinates received",
+            "NO_COORDS": "Downlink Failure; no coordinates in packet",
+            "WRONG_COORDS": "Downlink Failure; incorrect coordinates",
+            "GO_TOPO": "Downlink Success; topography downlink received",
+            "NO_TOPO": "Downlink Failure; topography downlink failed "
         }
         recipient = "mission control"
         message = message_dictionary[code]
         message_tuple = (code, message)
         self.__uplink(recipient, message_tuple)
-        pass
+        return
 
-    def uplink_vector(self, vector):
+    def get_topography(self, vector):
+        """
+        Uplink a vector to the orbiter to get topographical information around the vector
+        :param vector: vector tuple
+        """
         recipient = "mps_orbiter"
         self.__uplink(recipient, vector)
         return
 
     @staticmethod
     def __uplink(recipient, packet):
+        """
+        Interfaces with Communications System to send packets out from the rover
+        :param recipient: String dictating who the message is intended for
+        :param packet: Tuple containing message information
+        """
         payload = {
             "recipient": recipient,
             "sender": "navigation",
             "payload": packet
         }
-        if packet[0] == "SUCCESS" or packet[0] == "NOPATH":
-            print(packet[1])
-        else:
-            print("Sending uplink packet to comms:", payload)
+        print("Sending uplink packet to comms:", payload)
+        return
+
