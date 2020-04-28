@@ -16,12 +16,12 @@ System functions based on lucidchart diagrams
 - Handle pathfind failure
     ** Detect pathfind failure and generate message to send to mission control with pathfind failure information
 
-- Comment Pathfinder.py
-    ** Lots of messy code. Needs code comments
-
 - Pathfind system probably needs a method to delete/archive waypoints after driving succesfuly through them
 
 - Need some way of determining current location
+
+✔ Comment Pathfinder.py
+    ** Lots of messy code. Needs code comments (One method still needs commenting)
 
 ✔ Uplink status messages
     Program that interfaces with the comms to send status messages from the rover to mission control
