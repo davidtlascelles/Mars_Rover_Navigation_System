@@ -38,7 +38,6 @@ class Vector:
         """
         Finds the cardinal heading, represented as an integer corresponding with the 8 cardinal directions:
         E: 0, NE: 1, N: 2, NW: 3, W: 4, SW: 5, S: 6, SE: 7
-        :param vector: accepts a vector tuple
         :param radians: changes return type to heading in radians
         :return: returns an integer cardinal direction heading
         """
@@ -73,7 +72,6 @@ class Vector:
     def __cardinal_heading(self):
         """
         Support method for heading(), looks up cardinal direction from radian value
-        :param heading: radian heading value
         :return: cardinal direction heading integer
         """
         # Intermediate cardinal coordinate boundaries (constant)

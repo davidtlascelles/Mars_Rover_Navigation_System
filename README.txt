@@ -3,23 +3,16 @@ System functions based on lucidchart diagrams
 - Pass downrange vector to imaging system after route established (vector to next waypoint)
     ** Program that interfaces with the imaging system to pass a vector
 
-- Pass vectors to drive system
-    ** Program that interfaces with the drive system to pass direction vectors as rover's location updates.
-    Buffer of upcoming vectors kept in memory
-
 - Inject hazard avoidance waypoints into preliminary route waypoint database
     ** Program that interfaces with the hazard avoidance subsystem to recieve floating point waypoints around obstacles
 
-- Handle pathfind failure
-    ** Detect pathfind failure and generate message to send to mission control with pathfind failure information
+- Drive interface archives waypoints and updates current coordinatesafter Drive System reports success.
 
-- Pathfind system probably needs a method to delete/archive waypoints after driving succesfuly through them
-
-- Need some way of determining current location
-
-- Comms system should be able to accept a command from mission control to redefine pathfinding parameters (ie MAX_DELTA_Z)
-
-✔
+- Drive interface needs to generate vectors to pass to Drive System
+    ** Program that interfaces with the drive system to pass direction vectors as rover's location updates.
+    Buffer of upcoming vectors kept in memory
+    Update buffer with next vector if Drive System reports success
+    Dump buffer if Drive System reports failure
 
 ✔ Uplink status messages
     Program that interfaces with the comms to send status messages from the rover to mission control

@@ -2,10 +2,9 @@ import time
 
 import Communication_Dispatch
 import Database
+import Onboard_Systems_Interface
 import Pathfinder
 import Vector_Handler
-import Onboard_Systems_Interface
-
 
 
 def wait_for_comms_activity():
@@ -68,14 +67,13 @@ Database_object.delete_all_rows('checkpoints')
 Pathfinder_object.pathfind(Database_object, current_coordinates, destination)
 
 # Generate vectors between waypoints
-    ## Probably a method in Vector Handler will work? Should vectors be stored in DB or passed right away to Drive?
+# Probably a method in Vector Handler will work? Should vectors be stored in DB or passed right away to Drive?
 
 # Pass downrange vector to imaging system
-Onboard_Systems_Interface.sensor_orientation(Database_object, Pathfinder_object)
+# Onboard_Systems_Interface.sensor_orientation(Database_object, Pathfinder_object)
 # Wait for hazard detection for high resolution waypoints
 
 # Start Driving
-
 
 
 # rover_position = (1068, 873, 1101.01) # Pathfind failure
