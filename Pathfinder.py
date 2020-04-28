@@ -15,17 +15,15 @@ class PathFinder:
     # Lower numbers allow more uneven terrain at a checkpoint.
     SAFE_TOPOGRAPHY_THRESHOLD = 5
 
+    # Used for checking points around a coordinate. Private variable. Do not change.
+    #                     E  0   NE  1    N  2    NW  3    W   4    SW   5    S   6   SE   7
+    __transforms = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
+
     def __init__(self):
         self.new_waypoint = None
         self.current_coordinate = None
         self.topography = None
         self.visited_count = 0
-
-
-
-        # Used for checking points around a coordinate. Private variable. Do not change.
-        #                     E  0   NE  1    N  2    NW  3    W   4    SW   5    S   6   SE   7
-        self.__transforms = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
 
     def travel_direction(self, db, heading):
         """
@@ -159,7 +157,7 @@ class PathFinder:
 
         if new_point == end:
             comms = Communication_Dispatch.CommunicationDispatch()
-            comms.uplink_rover_status("PATH")
+            comms.uplink_rover_status("GO_PATH")
             return
 
         try:
