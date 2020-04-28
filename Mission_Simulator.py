@@ -1,89 +1,7 @@
-# import os
-# import shutil
-# import time
-# import Database
-# import Communication_Dispatch
-#
-# def unwrap_message():
-#     with open(os.path.join(location, 'uplink.txt'), "r") as file:
-#         message = file.readlines()
-#         file.close()
-#         print("opening uplink", message)
-#         os.remove(os.path.join(location, 'uplink.txt'))
-#         recipient = message[0].strip()
-#         packet = message[2].strip()
-#         return recipient, packet
-#
-# def distpatch_decider():
-#     recipient, packet = unwrap_message()
-#     if recipient == "mission control":
-#         if packet == "('NO_COORDS', 'Downlink Failure; no coordinates in packet')":
-#             create_start_coords(start)
-#             return True
-#
-#     else:
-#         if packet == "Requesting Current Coordinates":
-#             create_start_coords(start)
-#             return True
-#         coordinate_topography()
-#         return True
-#
-#
-# def activity(activity_type):
-#     name = f"{activity_type}.txt"
-#     file = None
-#     while file is None:
-#         try:
-#             with open(os.path.join(location, name), "r") as file:
-#                 pass
-#         except FileNotFoundError:
-#             time.sleep(FILE_CHECK_INTERVAL)
-#             print("no activity")
-#         if file is not None:
-#             file.close()
-#             return#
-#
-
-#
-# comms = Communication_Dispatch.CommunicationDispatch()
-# create_destination_coords(end)
-#
-# # Start Coordinates
-# activity("uplink")
-# distpatch_decider()
-# while distpatch_decider() is not True:
-#     activity("uplink")
-#     distpatch_decider()
-#
-# # Topography
-# activity("uplink")
-# distpatch_decider()
-# while distpatch_decider() is not True:
-#     activity("uplink")
-#     distpatch_decider()
-#
-# db = Database.Database()
-# while current != end:
-#     size = db.get_table_size("waypoints")
-#
-#     # Find visited number of current coordinate
-#     visited_count = db.get_visited_count(current)
-#
-#     i = 1
-#     # Look for next highest visited number
-#     next_point = db.select_point_by_visited(visited_count + i)
-#     while next_point is None:
-#         i += 1
-#         next_point = db.select_point_by_visited(visited_count + i)
-#     activity("downlink")
-#     unwrap_message()
-#     get_current_coords(next_point)
-#
-#
-
 import os
 import shutil
 import time
+import Database
 
 location = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 filepath = os.path.join(location, 'downlink.txt')
@@ -98,11 +16,12 @@ def unwrap_message():
                 file.close()
                 print("opening uplink", message)
                 os.remove(os.path.join(location, 'uplink.txt'))
-                recipient = message[0].strip()
-                packet = message[2].strip()
-                return recipient, packet
+                rcpt = message[0].strip()
+                pckt = message[2].strip()
+                return rcpt, pckt
         except FileNotFoundError:
             time.sleep(FILE_CHECK_INTERVAL)
+
 
 def coordinate_topography():
     src_file = os.path.join(location, "coordinate_topography_map_downlink.txt")
@@ -153,16 +72,27 @@ def create_destination_coords(end_coords):
     f.close()
     return
 
+
 FILE_CHECK_INTERVAL = 5
-start = current = (1328, 823, 1101.89)
+start = (1328, 823, 1101.89)
 end = (749, 574, 1117.56)
+
+db = Database.Database()
 
 create_destination_coords(end)
 recipient, packet = unwrap_message()
 
+visited = 0
 while packet != "Mission Success; Destination reached successfully":
     if packet == "Requesting Current Coordinates":
-        create_start_coords(start)
+        if db.get_table_size("traversed") == 0:
+            get_current_coords(start)
+        else:
+            coords = db.select_point_by_visited(visited)
+            while coords is None:
+                visited += 1
+                coords = db.select_point_by_visited(visited)
+            get_current_coords(coords)
     elif packet[0] == "[":
         coordinate_topography()
 
