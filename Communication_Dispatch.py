@@ -1,5 +1,5 @@
 import os
-
+import Pathfinder
 
 class CommunicationDispatch:
 
@@ -118,7 +118,8 @@ class CommunicationDispatch:
             "NO_COORDS": "Downlink Failure; no coordinates in packet",
             "WRONG_COORDS": "Downlink Failure; incorrect coordinates",
             "GO_TOPO": "Downlink Success; topography downlink received",
-            "NO_TOPO": "Downlink Failure; topography downlink failed "
+            "NO_TOPO": "Downlink Failure; topography downlink failed ",
+            "GO_PARAMS": "Downlink Success; mission parameters updated"
         }
         recipient = "mission control"
         message = message_dictionary[code]
@@ -135,6 +136,29 @@ class CommunicationDispatch:
         self.__uplink(recipient, vector)
         return
 
+    def set_parameters(self):
+        message = self.__downlink()
+        header_message_type = message[1].strip()
+        # Verify packet contains coordinates
+        if header_message_type == 'parameters':
+            header_sender = message[2].strip()
+            # Verify packet is from correct sender
+            if header_sender == 'mission control':
+                payload = message[3].split('=')
+                parameter = payload[0].strip()
+                value = float(payload[1])
+                if parameter == "MAX_DELTA_Z":
+                    self.uplink_rover_status("GO_PARAMS")
+                    Pathfinder.PathFinder.set_MAX_DELTA_Z(value)
+                elif parameter == "MIN_DISTANCE_FROM_PREV_CHECKPOINT":
+                    self.uplink_rover_status("GO_PARAMS")
+                    Pathfinder.PathFinder.set_MIN_DISTANCE_FROM_PREV_CHECKPOINT(value)
+                elif parameter == "SAFE_TOPOGRAPHY_THRESHOLD":
+                    self.uplink_rover_status("GO_PARAMS")
+                    Pathfinder.PathFinder.set_SAFE_TOPOGRAPHY_THRESHOLD(value)
+                return
+        return
+
     @staticmethod
     def __uplink(recipient, packet):
         """
@@ -149,4 +173,3 @@ class CommunicationDispatch:
         }
         print("Sending uplink packet to comms:", payload)
         return
-

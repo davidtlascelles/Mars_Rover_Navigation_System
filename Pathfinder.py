@@ -4,22 +4,24 @@ import Communication_Dispatch
 
 class PathFinder:
 
+    # Maximum tolerance for adjacent coordinate elevation change to determine safe travel
+    MAX_DELTA_Z = 0.2
+
+    # Minimum tolerance for determining if checkpoints are sufficiently
+    # far from each other to allow successful backtracking
+    MIN_DISTANCE_FROM_PREV_CHECKPOINT = 15
+
+    # Threshold for the number of adjacent coordinates with safe topography. (Max 7)
+    # Lower numbers allow more uneven terrain at a checkpoint.
+    SAFE_TOPOGRAPHY_THRESHOLD = 5
+
     def __init__(self):
         self.new_waypoint = None
         self.current_coordinate = None
         self.topography = None
         self.visited_count = 0
 
-        # Maximum tolerance for adjacent coordinate elevation change to determine safe travel
-        self.MAX_DELTA_Z = 0.2
 
-        # Minimum tolerance for determining if checkpoints are sufficiently
-        # far from each other to allow successful backtracking
-        self.MIN_DISTANCE_FROM_PREV_CHECKPOINT = 15
-
-        # Threshold for the number of adjacent coordinates with safe topography. (Max 7)
-        # Lower numbers allow more uneven terrain at a checkpoint.
-        self.SAFE_TOPOGRAPHY_THRESHOLD = 5
 
         # Used for checking points around a coordinate. Private variable. Do not change.
         #                     E  0   NE  1    N  2    NW  3    W   4    SW   5    S   6   SE   7
@@ -163,7 +165,7 @@ class PathFinder:
         try:
             # Loops, finds next waypoint
             self.pathfind(db, new_point, end)
-        except:
+        except RecursionError:
             comms = Communication_Dispatch.CommunicationDispatch()
             comms.uplink_rover_status("NO_PATH")
         return
@@ -273,29 +275,32 @@ class PathFinder:
             return True
         return False
 
-    def set_MAX_DELTA_Z(self, tolerance):
+    @classmethod
+    def set_MAX_DELTA_Z(cls, tolerance):
         """
         Adjusts maximum tolerance for adjacent coordinate elevation change to determine safe travel. Lower is safer
         :param tolerance: Tolerance value in meters
         """
-        self.MAX_DELTA_Z = tolerance
+        cls.MAX_DELTA_Z = tolerance
         return
 
-    def set_MIN_DISTANCE_FROM_PREV_CHECKPOINT(self, tolerance):
+    @classmethod
+    def set_MIN_DISTANCE_FROM_PREV_CHECKPOINT(cls, tolerance):
         """
         Adjusts minimum tolerance for determining if checkpoints are sufficiently far from each other to
         allow successful backtracking. Avoid low values to reduce pathfinding compute time.
         :param tolerance: Tolerance value in meters
         :return:
         """
-        self.MIN_DISTANCE_FROM_PREV_CHECKPOINT = tolerance
+        cls.MIN_DISTANCE_FROM_PREV_CHECKPOINT = tolerance
         return
 
-    def set_SAFE_TOPOGRAPHY_THRESHOLD(self, threshold):
+    @classmethod
+    def set_SAFE_TOPOGRAPHY_THRESHOLD(cls, threshold):
         """
         Adjusts threshold for the number of adjacent coordinates with safe topography.
         Avoid lower numbers to avoid more uneven terrain at a checkpoint.
         :param threshold: Threshold of safe adjacent points (Max 7)
         """
-        self.SAFE_TOPOGRAPHY_THRESHOLD = threshold
+        cls.SAFE_TOPOGRAPHY_THRESHOLD = threshold
         return
