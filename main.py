@@ -7,12 +7,13 @@ import Vector_Handler
 import Onboard_Systems_Interface
 
 
+
 def wait_for_comms_activity():
     COMM_CHECK_INTERVAL = 5
-    activity = Comms_object.activity()
+    activity = comms.activity()
     while activity is False:
         time.sleep(COMM_CHECK_INTERVAL)
-        activity = Comms_object.activity()
+        activity = comms.activity()
     return
 
 
@@ -23,10 +24,8 @@ def wait_for_downlink(obj, step):
         sender = "mps orbiter"
     else:
         wait_for_comms_activity()
-        print("Topography downlink requested from mps orbiter")
         return obj.downlink_topography()
     wait_for_comms_activity()
-    print("Coordinate downlink requested from", sender)
     point = obj.downlink_coordinates(sender)
     if point is None:
         wait_for_comms_activity()
@@ -34,26 +33,25 @@ def wait_for_downlink(obj, step):
     return point
 
 
-Comms_object = Communication_Dispatch.CommunicationDispatch()
+comms = Communication_Dispatch.CommunicationDispatch()
 
 # Wait until mission control sends destination coordinates to trigger autonomous navigation
-destination = wait_for_downlink(Comms_object, 1)
+destination = wait_for_downlink(comms, 1)
 
 # Requesting current coordinates
-Comms_object.request_current_coordinates()
+comms.get_current_coordinates()
 
 # Waiting for current coordinate response from orbiter
-current_coordinates = wait_for_downlink(Comms_object, 2)
+current_coordinates = wait_for_downlink(comms, 2)
 
 # Creates heading vector for topography
-Vector_object = Vector_Handler.VectorHandler()
-vector = Vector_object.make_vector(current_coordinates, destination, True)
+v = Vector_Handler.Vector(current_coordinates, destination, False)
 
 # Sends vector to orbiter, requesting topology
-Comms_object.uplink_vector(vector)
+comms.get_topography(v.vector)
 
 # Waiting for topology map response from orbiter
-topo_map = wait_for_downlink(Comms_object, 3)
+topo_map = wait_for_downlink(comms, 3)
 
 # Load topology map into pathfinding system
 Pathfinder_object = Pathfinder.PathFinder()
@@ -67,15 +65,14 @@ Database_object.delete_all_rows('waypoints')
 Database_object.delete_all_rows('checkpoints')
 
 # Begin pathfinding search for preliminary route
-Pathfinder_object.pathfind(Database_object, Vector_object, current_coordinates, destination)
-print("Preliminary route established")
-Comms_object.uplink_rover_status("SUCCESS")
+Pathfinder_object.pathfind(Database_object, current_coordinates, destination)
+comms.uplink_rover_status("PATH")
 
 # Generate vectors between waypoints
     ## Probably a method in Vector Handler will work? Should vectors be stored in DB or passed right away to Drive?
 
 # Pass downrange vector to imaging system
-Onboard_Systems_Interface.sensor_orientation(Database_object, Vector_object, Pathfinder_object)
+Onboard_Systems_Interface.sensor_orientation(Database_object, Pathfinder_object)
 # Wait for hazard detection for high resolution waypoints
 
 # Start Driving
