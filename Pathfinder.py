@@ -17,11 +17,13 @@ class PathFinder:
         point = None
         while i < 4:
             if i == 0:
+                # Determines if the current waypoint has viable adjacent points, towards the heading, to travel
                 point = self.safe_travel_options(db, heading)
                 i += 1
                 if point is not None:
                     return point
             elif i < 4:
+                # If the adjacent points towards the heading are not viable, checks the points further away from the heading
                 right = self.safe_travel_options(db, (heading + i) % 7)
                 left = self.safe_travel_options(db, (heading - i) % 7)
 
@@ -36,6 +38,7 @@ class PathFinder:
                     return right
                 elif left is not None and right is None:
                     return left
+                # If there are no viable points in any direction, backtrack to the last checkpoint
                 if i == 4:
                     self.backtrack(db)
                     return self.travel_direction(db, heading)
@@ -112,21 +115,26 @@ class PathFinder:
         vector = v.make_vector(start, end)
         heading = v.heading(vector)
 
+        # Calculates the distance away from the current waypoint to the destination
         new_distance = v.magnitude(vector)
         new_direction = None
         new_point = end
 
         if new_distance > 1.5:
+            # Gets the next point to travel to (Preferably towards the heading)
             new_point = self.travel_direction(db, heading)
             # print(f"Traveling, {new_point}")
 
+            # From the new waypoint to travel to, recalculate distance from destination and heading
             new_vector = v.make_vector(new_point, end)
             new_direction = v.heading(new_vector)
             new_distance = v.magnitude(new_vector)
 
         self.visited_count += 1
+        # Adds the new waypoint to the database
         db_point = (new_point[0], new_point[1], new_point[2], new_distance, new_direction, self.visited_count)
 
+        # Creates a new checkpoint from the new waypoint
         db.create_waypoint(db_point)
         self.checkpoint(db, v, new_point, heading)
         self.new_waypoint = new_point
@@ -134,6 +142,7 @@ class PathFinder:
         if new_point == end:
             return
 
+        # Loops, finds next waypoint 
         self.pathfind(db, v, new_point, end)
 
     def checkpoint(self, db, v, point, heading):
