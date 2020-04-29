@@ -2,7 +2,7 @@ import os
 import time
 
 from Pathfinder import PathFinder
-from Onboard_Systems_Interface import DriveInterface
+
 
 class CommunicationDispatch:
     COMM_CHECK_INTERVAL = 2

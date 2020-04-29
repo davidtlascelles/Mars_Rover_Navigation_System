@@ -1,38 +1,43 @@
 import time
+from Vector_Handler import Vector
 
 
 class DriveInterface:
 
-    def __init__(self, database_object, comms_object):
+    def __init__(self, database_object, comms_object, start, end):
         self.db = database_object
         self.comms = comms_object
-        self.destination_coordinate = None
-        self.current_coordinate = None
+        self.destination_coordinate = end
+        self.starting_coordinate = start
+        self.current_coordinate = start
 
         self.vector_buffer = []
 
-    def drive_buffer(self, done=False):
-        # while current != self.destination_coordinate:
-        #     v = [0, 0]
-        #     first = self.vector_buffer[0][0]
-        #     last = self.vector_buffer[len(self.vector_buffer) - 1][0]
-        #     if first != last:
-        #         v = Vector_Handler.Vector(first, last)
-        #
-        #     while v.magnitude < 10:
-        #         visited += 1
-        #
-        #         next_point = db.select_point_by_visited(visited)
-        #         if next_point == self.destination_coordinate:
-        #             done = True
-        #             break
-        #         while next_point is None:
-        #             visited += 1
-        #             next_point = db.select_point_by_visited(visited)
-        #         self.vector_buffer.append((next_point, Vector_Handler.Vector(current, next_point)))
-        #         current = next_point
-        #     if done is True:
-        #         break
+    def drive_buffer(self, done=False, initialize=False):
+        start = self.current_coordinate
+
+        if initialize is True:
+            next_waypoint = self.db.select_point_by_visited(1)
+            v = Vector(start, next_waypoint)
+            self.vector_buffer.append((v.vector, v))
+            start = next_waypoint
+
+        distance = 0
+
+        while distance < 10:
+            visited = self.db.get_visited_count(start) + 1
+            next_waypoint = self.db.select_point_by_visited(visited)
+            while next_waypoint is None:
+                visited += 1
+                next_waypoint = self.db.select_point_by_visited(visited)
+            visited += 1
+
+            v = Vector(start, next_waypoint)
+            self.vector_buffer.append((v.vector, v))
+
+            d = Vector(self.current_coordinate, next_waypoint)
+            distance = d.magnitude
+            start = next_waypoint
         return
 
     def __interrupt_drive_buffer(self):
@@ -55,41 +60,58 @@ class DriveInterface:
         self.vector_buffer.append(vector)
         return
 
-    def get_sensor_vector(self):
-        vector = self.vector_buffer[0]
-        print("Send vector to sensors", vector[1])
-        return
-
     def drive(self):
         self.comms.uplink_rover_status("GO_DRIVE")
-        self.current_coordinate = self.db.select_point_by_visited(1)
+        print()
         current = self.current_coordinate
         self.db.create_traversed(current)
 
-        visited = 0
+        # Initialize drive buffer
+        self.drive_buffer(initialize=True)
 
         while self.current_coordinate != self.destination_coordinate:
             self.current_coordinate = self.downlink_coords()
-            print(self.current_coordinate)
             self.db.create_traversed(self.current_coordinate)
-            print("Pass Vector To Imaging System") #########################################
-            print("Add Hazard Avoidance To waypoints") #####################################
-            self.drive_buffer()
-            print("Pass next vector to drive system")
-            print("Recieve drive system response")
-            response = None#####################################
+            self.pass_to_sensor_array()
+            time.sleep(.1)
+            print("Waiting for Hazard Avoidance;\t", end='')
+            #if hazard, clear buffer and rebuffer waypoints
+                # clear buffer
+                # add hazard waypoints
+                #self.drive_buffer()
+            self.pass_to_drive_system()
+            response = self.drive_system_response()
             while response is None:
                 time.sleep(5)
-                response = 0 ################################
+                response = self.drive_system_response()
                 if response == "Error":
                     self.drive_buffer(done=True)
                     self.comms.uplink_rover_status("DRIVE_FAULT")
                     return
                 else:
                     pass
+            self.drive_buffer()
 
         self.comms.uplink_rover_status("SUCCESS")
         return
+
+    def pass_to_sensor_array(self):
+        vector = self.vector_buffer[0]
+        time.sleep(.1)
+        print("Sending vector to Sensor Array;\t", end='')
+        return
+
+    @staticmethod
+    def drive_system_response():
+        time.sleep(.3)
+        message = "DRIVE_OK"
+        print(f"Awaiting Drive System response: {message}: Rover traversed terrain to next waypoint successfully\n")
+        return message
+
+    def pass_to_drive_system(self):
+        time.sleep(.1)
+        vector = self.vector_buffer.pop(0)
+        print("Sending vector to Drive System:", vector[1].vector)
 
     def wait_for_comms_activity(self):
         COMM_CHECK_INTERVAL = 1

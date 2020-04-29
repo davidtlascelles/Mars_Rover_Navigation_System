@@ -74,7 +74,7 @@ def create_destination_coords(end_coords):
     return
 
 
-FILE_CHECK_INTERVAL = 5
+FILE_CHECK_INTERVAL = 3
 start = (1321, 817, 1101.65)
 end = (749, 574, 1117.56)
 

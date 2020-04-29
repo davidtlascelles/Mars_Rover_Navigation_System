@@ -35,7 +35,6 @@ def wait_for_downlink(obj, step):
 Pathfinder_object = PathFinder()
 Database_object = Database()
 Comms_object = CommunicationDispatch()
-Drive_object = DriveInterface(Database_object, Comms_object)
 
 # Wait until mission control sends destination coordinates to trigger autonomous navigation
 destination = wait_for_downlink(Comms_object, 1)
@@ -45,6 +44,8 @@ Comms_object.get_current_coordinates()
 
 # Waiting for current coordinate response from orbiter
 current_coordinates = wait_for_downlink(Comms_object, 2)
+
+Drive_object = DriveInterface(Database_object, Comms_object, current_coordinates, destination)
 
 # Creates heading vector for topography
 v = Vector(current_coordinates, destination, False)

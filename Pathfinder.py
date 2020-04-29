@@ -157,7 +157,6 @@ class PathFinder:
         #comms = CommunicationDispatch()
         if new_point == end:
             #comms.uplink_rover_status("GO_PATH")
-            setattr(dr, "destination_coordinate", end)
             dr.drive()
             print("out of drive")
             return
