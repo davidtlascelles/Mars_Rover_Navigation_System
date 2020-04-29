@@ -1,5 +1,4 @@
 from Vector_Handler import Vector
-#from Communication_Dispatch import CommunicationDispatch
 
 
 class PathFinder:
@@ -25,7 +24,7 @@ class PathFinder:
         self.current_coordinate = None
         self.visited_count = 0
 
-    def travel_direction(self, db, heading):
+    def travel_direction(self, db, comms, heading):
         """
         Finds a valid direction to travel
         :param db: Database object
@@ -60,9 +59,10 @@ class PathFinder:
                     return left
                 # If there is no safe terrain in any direction, backtrack to the last checkpoint
                 if i == 4:
+                    comms.uplink_rover_status("BACKTRACK")
                     self.backtrack(db)
                     # Recheck for next viable path
-                    return self.travel_direction(db, heading)
+                    return self.travel_direction(db, comms, heading)
 
     def safe_travel_options(self, db, direction):
         """
@@ -123,7 +123,7 @@ class PathFinder:
 
         return count
 
-    def pathfind(self, db, dr, start, end):
+    def pathfind(self, db, dr, comms, start, end):
         """
         Core pathfinding logic
         :param db: Database object
@@ -139,7 +139,7 @@ class PathFinder:
         # When not next to destination endpoint
         if vector.magnitude > 1.5:
             # Gets the next waypoint favoring the heading
-            new_point = self.travel_direction(db, vector.cardinal_heading)
+            new_point = self.travel_direction(db, comms, vector.cardinal_heading)
             # print(f"Waypoint, {new_point}")
 
             # From the new waypoint, recalculate distance from destination and heading
@@ -154,19 +154,18 @@ class PathFinder:
         db.create_waypoint(db_point)
         self.checkpoint(db, new_point, heading)
         self.new_waypoint = new_point
-        #comms = CommunicationDispatch()
         if new_point == end:
-            #comms.uplink_rover_status("GO_PATH")
+            comms.uplink_rover_status("GO_PATH")
             dr.drive()
             print("out of drive")
             return
 
         try:
             # Loops, finds next waypoint
-            self.pathfind(db, dr, new_point, end)
+            self.pathfind(db, dr, comms, new_point, end)
         except RecursionError:
             print()
-            #comms.uplink_rover_status("NO_PATH")
+            comms.uplink_rover_status("NO_PATH")
         return
 
     def checkpoint(self, db, point, heading):

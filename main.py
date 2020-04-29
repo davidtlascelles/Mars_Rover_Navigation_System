@@ -55,4 +55,4 @@ Comms_object.get_topography(v.vector)
 wait_for_downlink(Comms_object, 3)
 
 # Begin pathfinding search for preliminary route
-Pathfinder_object.pathfind(Database_object, Drive_object, current_coordinates, destination)
+Pathfinder_object.pathfind(Database_object, Drive_object, Comms_object, current_coordinates, destination)

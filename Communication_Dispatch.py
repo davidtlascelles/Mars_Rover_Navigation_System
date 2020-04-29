@@ -120,6 +120,7 @@ class CommunicationDispatch:
             "DRIVE_FAULT": "Driving Interrupted; critical failure",
             "GO_PATH": "Pathfind Success; route established",
             "NO_PATH": "Pathfind Failure; no route established",
+            "BACKTRACK": "Pathfind Fault; removing wayponits back to last checkpoint",
             "GO_DEST": "Downlink Success; destination coordinates received",
             "GO_POSITION": "Downlink Success; current coordinates received",
             "NO_COORDS": "Downlink Failure; no coordinates in packet",
