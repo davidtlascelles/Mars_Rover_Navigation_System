@@ -1,3 +1,4 @@
+from Database import Database
 from Vector_Handler import Vector
 
 
@@ -18,13 +19,18 @@ class PathFinder:
     __transforms = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
 
     topography = None
+    destination = None
 
     def __init__(self):
         self.new_waypoint = None
-        self.current_coordinate = None
+
+        self.drive = None
+        self.comms = None
+        self.database = Database()
+
         self.visited_count = 0
 
-    def travel_direction(self, db, comms, heading):
+    def travel_direction(self, heading):
         """
         Finds a valid direction to travel
         :param db: Database object
@@ -36,14 +42,14 @@ class PathFinder:
         while i < 4:
             if i == 0:
                 # Determines if the current forward heading has safe terrain to traverse
-                point = self.safe_travel_options(db, heading)
+                point = self.safe_travel_options(heading)
                 i += 1
                 if point is not None:
                     return point
             elif i < 4:
                 # Progressively check terrain to the left and right of the rover for safe terrain to traverse
-                right = self.safe_travel_options(db, (heading + i) % 7)
-                left = self.safe_travel_options(db, (heading - i) % 7)
+                right = self.safe_travel_options((heading + i) % 7)
+                left = self.safe_travel_options((heading - i) % 7)
 
                 i += 1
                 # Favor left or right by picking minimum elevation change
@@ -59,12 +65,12 @@ class PathFinder:
                     return left
                 # If there is no safe terrain in any direction, backtrack to the last checkpoint
                 if i == 4:
-                    comms.uplink_rover_status("BACKTRACK")
-                    self.backtrack(db)
+                    self.comms.uplink_rover_status("BACKTRACK")
+                    self.backtrack()
                     # Recheck for next viable path
-                    return self.travel_direction(db, comms, heading)
+                    return self.travel_direction(heading)
 
-    def safe_travel_options(self, db, direction):
+    def safe_travel_options(self, direction):
         """
         Finds a safe gradient in adjacent cells defined by direction parameter.
         MAX_DELTA_Z is defined in the class, and represents the elevation change tolerance
@@ -78,7 +84,7 @@ class PathFinder:
         next_move = (new_x, new_y, self.topography[new_x][new_y])
 
         # Checks if path has been visited to prevent backtracking loop
-        path_is_new = self.__new_path(db, next_move)
+        path_is_new = self.__new_path(next_move)
 
         # Find absolute value of height elevation change from current waypoint to transformed (adjacent) waypoint
         if abs(next_move[2] - self.new_waypoint[2]) < self.MAX_DELTA_Z and path_is_new:
@@ -123,7 +129,7 @@ class PathFinder:
 
         return count
 
-    def pathfind(self, db, dr, comms, start, end):
+    def pathfind(self, dr, comms, start, end):
         """
         Core pathfinding logic
         :param db: Database object
@@ -131,6 +137,10 @@ class PathFinder:
         :param end: Destination coordinates
         """
         self.new_waypoint = start
+        if self.destination is None:
+            self.set_destination(end)
+        self.drive = dr
+        self.comms = comms
         vector = Vector(start, end, False)
         heading = vector.cardinal_heading
 
@@ -139,7 +149,7 @@ class PathFinder:
         # When not next to destination endpoint
         if vector.magnitude > 1.5:
             # Gets the next waypoint favoring the heading
-            new_point = self.travel_direction(db, comms, vector.cardinal_heading)
+            new_point = self.travel_direction(vector.cardinal_heading)
             # print(f"Waypoint, {new_point}")
 
             # From the new waypoint, recalculate distance from destination and heading
@@ -151,8 +161,8 @@ class PathFinder:
                     vector.magnitude, vector.cardinal_heading, self.visited_count)
 
         # Creates a new checkpoint from the new waypoint
-        db.create_waypoint(db_point)
-        self.checkpoint(db, new_point, heading)
+        self.database.create_waypoint(db_point)
+        self.checkpoint(new_point, heading)
         self.new_waypoint = new_point
         if new_point == end:
             comms.uplink_rover_status("GO_PATH")
@@ -162,27 +172,27 @@ class PathFinder:
 
         try:
             # Loops, finds next waypoint
-            self.pathfind(db, dr, comms, new_point, end)
+            self.pathfind(self.drive, comms, new_point, end)
         except RecursionError:
             print()
             comms.uplink_rover_status("NO_PATH")
         return
 
-    def checkpoint(self, db, point, heading):
+    def checkpoint(self, point, heading):
         """
         Logs checkpoints if defined minimum distance and safe topography requirement is met
         :param db: Database object
         :param point: Current location of rover (tuple)
         :param heading: Cardinal direction heading (integer)
         """
-        count = db.get_table_size('checkpoints')
+        count = self.database.get_table_size('checkpoints')
         # Checks if checkpoints database is empty for first checkpoint
         if count == 0:
             db_checkpoint = (point[0], point[1], self.safe_travel_options_counter(heading))
-            db.create_checkpoint(db_checkpoint)
+            self.database.create_checkpoint(db_checkpoint)
         else:
             # Find distance since last checkpoint
-            last_checkpoint_coordinate = db.select_point_by_key(count, 'checkpoints')
+            last_checkpoint_coordinate = self.database.select_point_by_key(count, 'checkpoints')
             checkpoint_vector = Vector(point, last_checkpoint_coordinate, False)
             distance_between_checkpoints = checkpoint_vector.magnitude
 
@@ -194,43 +204,43 @@ class PathFinder:
                 # flat (many travel options are available), log checkpoint to database
                 if safe_options >= self.SAFE_TOPOGRAPHY_THRESHOLD:
                     db_checkpoint = (point[0], point[1], safe_options)
-                    db.create_checkpoint(db_checkpoint)
+                    self.database.create_checkpoint(db_checkpoint)
 
-    def backtrack(self, db):
+    def backtrack(self):
         """
         Core backtracking logic
         :param db: Database object
         """
         # Find key of last checkpoint
-        count = db.get_table_size('checkpoints')
+        count = self.database.get_table_size('checkpoints')
         # Look up checkpoint coordinates with key
-        last_checkpoint_coordinate = db.select_point_by_key(count, 'checkpoints')
+        last_checkpoint_coordinate = self.database.select_point_by_key(count, 'checkpoints')
         # Loop up number of safe options at last checkpoint
-        safe_options = db.select_point_by_key(count, 'checkpoints', True)[3]
+        safe_options = self.database.select_point_by_key(count, 'checkpoints', True)[3]
 
         if self.new_waypoint == last_checkpoint_coordinate:
             # print("Returned to checkpoint", last_checkpoint_coordinate)
-            db.delete_point(count, 'checkpoints')
+            self.database.delete_point(count, 'checkpoints')
             return
 
         # Determine if checkpoint is exhausted of safe options
         if safe_options < 2:
             # Delete last checkpoint from database
-            db.delete_point(count, 'checkpoints')
+            self.database.delete_point(count, 'checkpoints')
             # Set last checkpoint as invalid coordinates
             self.topography[int(last_checkpoint_coordinate[0])][int(last_checkpoint_coordinate[1])] = float('inf')
 
             # Find next checkpoint
-            count = db.get_table_size('checkpoints')
-            last_checkpoint_coordinate = db.select_point_by_key(count, 'checkpoints')
-            safe_options = db.select_point_by_key(count, 'checkpoints', True)[3]
+            count = self.database.get_table_size('checkpoints')
+            last_checkpoint_coordinate = self.database.select_point_by_key(count, 'checkpoints')
+            safe_options = self.database.select_point_by_key(count, 'checkpoints', True)[3]
 
-        self.__backtrack_segment(db, last_checkpoint_coordinate)
+        self.__backtrack_segment(last_checkpoint_coordinate)
 
-        db.update_value(count, 'checkpoints', 'safe_options', safe_options - 1)
+        self.database.update_value(count, 'checkpoints', 'safe_options', safe_options - 1)
         return
 
-    def __backtrack_segment(self, db, last_checkpoint):
+    def __backtrack_segment(self, last_checkpoint):
         """
         Gets waypoints in reverse order from database, deletes them, and makes the coordinate unreachable.
         When backtracking is complete, return coordinates of the last checkpoint.
@@ -242,34 +252,33 @@ class PathFinder:
             return last_checkpoint
 
         # Find visited number of current coordinate
-        visited_count = db.get_visited_count(self.new_waypoint)
+        visited_count = self.database.get_visited_count(self.new_waypoint)
 
         i = 1
         # Look for next lowest visited number
-        next_point = db.select_point_by_visited(visited_count - i)
+        next_point = self.database.select_point_by_visited(visited_count - i)
         while next_point is None:
             i += 1
-            next_point = db.select_point_by_visited(visited_count - i)
+            next_point = self.database.select_point_by_visited(visited_count - i)
 
         # print(f"Backtracking, {next_point}")
 
         # Delete waypoint from database
-        db.delete_point(self.new_waypoint, 'waypoints')
+        self.database.delete_point(self.new_waypoint, 'waypoints')
         # Make waypoint unreachable during this pathfinding session
         self.topography[int(self.new_waypoint[0])][int(self.new_waypoint[1])] = float('inf')
         # Keep backtracking
         self.new_waypoint = next_point
-        self.__backtrack_segment(db, last_checkpoint)
+        self.__backtrack_segment(last_checkpoint)
 
-    @staticmethod
-    def __new_path(db, point):
+    def __new_path(self, point):
         """
         Querys database for a specific point, returns true if the waypoint coordinate is new
         :param db: Database object
         :param point: Coordinate waypoint
         :return: Boolean value for new coordinate status
         """
-        if db.select_point_by_key(point, 'waypoints') is None:
+        if self.database.select_point_by_key(point, 'waypoints') is None:
             return True
         return False
 
@@ -308,6 +317,14 @@ class PathFinder:
         cls.topography = topo_map
         return
 
+    @classmethod
+    def set_destination(cls, destination):
+        cls.destination = destination
+        return
 
-
-
+    def restart_pathfinding(self, new_start):
+        print(new_start)
+        self.database.delete_all_rows('waypoints')
+        self.database.delete_all_rows('checkpoints')
+        self.pathfind(self.drive, self.comms, new_start, self.destination)
+        return

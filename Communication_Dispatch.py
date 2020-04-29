@@ -7,6 +7,8 @@ from Pathfinder import PathFinder
 class CommunicationDispatch:
     COMM_CHECK_INTERVAL = 2
 
+    current = None
+
     def __init__(self):
         self.p = PathFinder()
         # Finds current directory
@@ -36,6 +38,12 @@ class CommunicationDispatch:
             file.close()
             os.remove(os.path.join(self.location, 'downlink.txt'))
             if message[0].strip() == "navigation":
+                if message[1].strip() == "status":
+                    self.uplink_current_coordinates(message)
+                    return None
+                if message[1].strip() == "parameters":
+                    self.set_parameters(message)
+                    return None
                 return message
             return None
 
@@ -62,6 +70,7 @@ class CommunicationDispatch:
                 if expected_sender == "mission control":
                     # unwrapped_payload = (749, 574, 1117.56)
                     self.uplink_rover_status("GO_DEST")
+                    self.__set_current(unwrapped_payload)
                     return unwrapped_payload
                 # Current coordinates
                 elif expected_sender == "mps orbiter":
@@ -102,12 +111,27 @@ class CommunicationDispatch:
         self.uplink_rover_status("NO_TOPO")
         return
 
-    def get_current_coordinates(self):
+    def request_current_coordinates(self):
         """
         Sends request to orbiter for current coordinates
         """
         self.__uplink("mps orbiter", "Requesting Current Coordinates")
         return
+
+    def uplink_current_coordinates(self, message):
+        header_message_type = message[1].strip()
+        # Verify packet contains coordinates
+        if header_message_type == 'status':
+            header_sender = message[2].strip()
+            # Verify packet is from correct sender
+            if header_sender == 'mission control':
+                if message[3].strip == "Uplink Current Coordinates":
+                    self.uplink_rover_status("GO_REQUEST")
+                    coords = self.current
+                    packet = f"Current coordinates: {coords}"
+                    self.__uplink("mission control", packet)
+                return None
+        return None
 
     def uplink_rover_status(self, code):
         """
@@ -127,7 +151,8 @@ class CommunicationDispatch:
             "WRONG_COORDS": "Downlink Failure; incorrect coordinates",
             "GO_TOPO": "Downlink Success; topography downlink received",
             "NO_TOPO": "Downlink Failure; topography downlink failed ",
-            "GO_PARAMS": "Downlink Success; mission parameters updated"
+            "GO_PARAMS": "Downlink Success; mission parameters updated",
+            "GO_REQUEST": "Downlink Success; processing coordinate uplink"
         }
         recipient = "mission control"
         message = message_dictionary[code]
@@ -144,8 +169,7 @@ class CommunicationDispatch:
         self.__uplink(recipient, vector)
         return
 
-    def set_parameters(self):
-        message = self.__downlink()
+    def set_parameters(self, message):
         header_message_type = message[1].strip()
         # Verify packet contains coordinates
         if header_message_type == 'parameters':
@@ -156,14 +180,17 @@ class CommunicationDispatch:
                 parameter = payload[0].strip()
                 value = float(payload[1])
                 if parameter == "MAX_DELTA_Z":
-                    self.uplink_rover_status("GO_PARAMS")
                     self.p.set_MAX_DELTA_Z(value)
                 elif parameter == "MIN_DISTANCE_FROM_PREV_CHECKPOINT":
-                    self.uplink_rover_status("GO_PARAMS")
                     self.p.set_MIN_DISTANCE_FROM_PREV_CHECKPOINT(value)
                 elif parameter == "SAFE_TOPOGRAPHY_THRESHOLD":
-                    self.uplink_rover_status("GO_PARAMS")
                     self.p.set_SAFE_TOPOGRAPHY_THRESHOLD(value)
+                self.uplink_rover_status("GO_PARAMS")
+                if self.current is None:
+                    self.request_current_coordinates()
+                    time.sleep(2)
+                    self.current = self.downlink_coordinates("mission control")
+                self.p.restart_pathfinding(self.current)
                 return
         return
 
@@ -180,4 +207,9 @@ class CommunicationDispatch:
         with open(os.path.join(self.location, file_name), "w") as file:
             file.writelines(payload)
             file.close()
+        return
+
+    @classmethod
+    def __set_current(cls, coordinate):
+        cls.current = coordinate
         return

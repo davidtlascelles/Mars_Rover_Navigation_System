@@ -40,7 +40,7 @@ Comms_object = CommunicationDispatch()
 destination = wait_for_downlink(Comms_object, 1)
 
 # Requesting current coordinates
-Comms_object.get_current_coordinates()
+Comms_object.request_current_coordinates()
 
 # Waiting for current coordinate response from orbiter
 current_coordinates = wait_for_downlink(Comms_object, 2)
@@ -55,4 +55,4 @@ Comms_object.get_topography(v.vector)
 wait_for_downlink(Comms_object, 3)
 
 # Begin pathfinding search for preliminary route
-Pathfinder_object.pathfind(Database_object, Drive_object, Comms_object, current_coordinates, destination)
+Pathfinder_object.pathfind(Drive_object, Comms_object, current_coordinates, destination)

@@ -47,7 +47,7 @@ class DriveInterface:
         return
 
     def get_current_coordinates(self):
-        self.comms.get_current_coordinates()
+        self.comms.request_current_coordinates()
         self.current_coordinate = self.comms.downlink_coordinates("mps orbiter")
         return
 
@@ -122,11 +122,11 @@ class DriveInterface:
         return
 
     def downlink_coords(self):
-        self.comms.get_current_coordinates()
+        self.comms.request_current_coordinates()
         self.wait_for_comms_activity()
         point = self.comms.downlink_coordinates("mps orbiter")
         if point is None:
-            self.comms.get_current_coordinates()
+            self.comms.request_current_coordinates()
             self.wait_for_comms_activity()
             point = self.comms.downlink_coordinates("mps orbiter")
         return point
