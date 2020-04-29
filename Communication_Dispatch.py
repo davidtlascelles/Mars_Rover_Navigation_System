@@ -1,13 +1,14 @@
 import os
 import time
 
-import Pathfinder
-
+from Pathfinder import PathFinder
+from Onboard_Systems_Interface import DriveInterface
 
 class CommunicationDispatch:
-    COMM_CHECK_INTERVAL = 3
+    COMM_CHECK_INTERVAL = 2
 
     def __init__(self):
+        self.p = PathFinder()
         # Finds current directory
         self.location = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
@@ -56,7 +57,7 @@ class CommunicationDispatch:
                 payload = payload.rstrip(')')
                 payload = payload.lstrip('(')
                 piece = payload.split(',')
-                unwrapped_payload = (int(piece[0]), int(piece[1]), float(piece[2]))
+                unwrapped_payload = (int(float(piece[0])), int(float(piece[1])), float(piece[2]))
                 # Destination coordinates
                 if expected_sender == "mission control":
                     # unwrapped_payload = (749, 574, 1117.56)
@@ -96,7 +97,7 @@ class CommunicationDispatch:
                 topography_map.append(row)
 
             self.uplink_rover_status("GO_TOPO")
-            Pathfinder.PathFinder.set_topography(topography_map)
+            self.p.set_topography(topography_map)
             return
         self.uplink_rover_status("NO_TOPO")
         return
@@ -115,6 +116,7 @@ class CommunicationDispatch:
         """
         message_dictionary = {
             "SUCCESS": "Mission Success; Destination reached successfully",
+            "GO_DRIVE": "Driving Initiated: generating drive vectors",
             "DRIVE_FAULT": "Driving Interrupted; critical failure",
             "GO_PATH": "Pathfind Success; route established",
             "NO_PATH": "Pathfind Failure; no route established",
@@ -154,13 +156,13 @@ class CommunicationDispatch:
                 value = float(payload[1])
                 if parameter == "MAX_DELTA_Z":
                     self.uplink_rover_status("GO_PARAMS")
-                    Pathfinder.PathFinder.set_MAX_DELTA_Z(value)
+                    self.p.set_MAX_DELTA_Z(value)
                 elif parameter == "MIN_DISTANCE_FROM_PREV_CHECKPOINT":
                     self.uplink_rover_status("GO_PARAMS")
-                    Pathfinder.PathFinder.set_MIN_DISTANCE_FROM_PREV_CHECKPOINT(value)
+                    self.p.set_MIN_DISTANCE_FROM_PREV_CHECKPOINT(value)
                 elif parameter == "SAFE_TOPOGRAPHY_THRESHOLD":
                     self.uplink_rover_status("GO_PARAMS")
-                    Pathfinder.PathFinder.set_SAFE_TOPOGRAPHY_THRESHOLD(value)
+                    self.p.set_SAFE_TOPOGRAPHY_THRESHOLD(value)
                 return
         return
 

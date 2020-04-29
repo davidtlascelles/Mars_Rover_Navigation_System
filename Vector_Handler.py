@@ -3,11 +3,11 @@ import numpy
 
 class Vector:
 
-    def __init__(self, start=0, end=0, three_dimensional=True):
+    def __init__(self, start=(0, 0), end=(0, 0), three_dimensional=True):
         self.__starting_coordinate = start
         self.__ending_coordinate = end
 
-        self.vector = self.__make_vector(three_dimensional)
+        self.vector = self.__make_vector(three_dimensions=False)
         self.radian_heading = self.__heading()
         self.cardinal_heading = self.__heading(False)
         self.magnitude = self.__magnitude()

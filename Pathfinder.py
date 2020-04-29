@@ -1,9 +1,8 @@
-import Vector_Handler
-import Communication_Dispatch
+from Vector_Handler import Vector
+#from Communication_Dispatch import CommunicationDispatch
 
 
 class PathFinder:
-
     # Maximum tolerance for adjacent coordinate elevation change to determine safe travel
     MAX_DELTA_Z = 0.2
 
@@ -124,7 +123,7 @@ class PathFinder:
 
         return count
 
-    def pathfind(self, db, start, end):
+    def pathfind(self, db, dr, start, end):
         """
         Core pathfinding logic
         :param db: Database object
@@ -132,7 +131,7 @@ class PathFinder:
         :param end: Destination coordinates
         """
         self.new_waypoint = start
-        vector = Vector_Handler.Vector(start, end, False)
+        vector = Vector(start, end, False)
         heading = vector.cardinal_heading
 
         new_point = end
@@ -155,18 +154,20 @@ class PathFinder:
         db.create_waypoint(db_point)
         self.checkpoint(db, new_point, heading)
         self.new_waypoint = new_point
-
+        #comms = CommunicationDispatch()
         if new_point == end:
-            comms = Communication_Dispatch.CommunicationDispatch()
-            comms.uplink_rover_status("GO_PATH")
+            #comms.uplink_rover_status("GO_PATH")
+            setattr(dr, "destination_coordinate", end)
+            dr.drive()
+            print("out of drive")
             return
 
         try:
             # Loops, finds next waypoint
-            self.pathfind(db, new_point, end)
+            self.pathfind(db, dr, new_point, end)
         except RecursionError:
-            comms = Communication_Dispatch.CommunicationDispatch()
-            comms.uplink_rover_status("NO_PATH")
+            print()
+            #comms.uplink_rover_status("NO_PATH")
         return
 
     def checkpoint(self, db, point, heading):
@@ -184,7 +185,7 @@ class PathFinder:
         else:
             # Find distance since last checkpoint
             last_checkpoint_coordinate = db.select_point_by_key(count, 'checkpoints')
-            checkpoint_vector = Vector_Handler.Vector(point, last_checkpoint_coordinate, False)
+            checkpoint_vector = Vector(point, last_checkpoint_coordinate, False)
             distance_between_checkpoints = checkpoint_vector.magnitude
 
             if distance_between_checkpoints > self.MIN_DISTANCE_FROM_PREV_CHECKPOINT:
@@ -308,3 +309,7 @@ class PathFinder:
     def set_topography(cls, topo_map):
         cls.topography = topo_map
         return
+
+
+
+

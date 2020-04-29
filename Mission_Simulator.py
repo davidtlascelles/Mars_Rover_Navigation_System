@@ -1,6 +1,7 @@
 import os
 import shutil
 import time
+
 import Database
 
 location = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
@@ -74,15 +75,20 @@ def create_destination_coords(end_coords):
 
 
 FILE_CHECK_INTERVAL = 5
-start = (1328, 823, 1101.89)
+start = (1321, 817, 1101.65)
 end = (749, 574, 1117.56)
 
 db = Database.Database()
 
+# Clears tables from database file for testing new routes
+db.delete_all_rows('waypoints')
+db.delete_all_rows('checkpoints')
+db.delete_all_rows('traversed')
+
 create_destination_coords(end)
 recipient, packet = unwrap_message()
 
-visited = 0
+visited = 1
 while packet != "Mission Success; Destination reached successfully":
     if packet == "Requesting Current Coordinates":
         if db.get_table_size("traversed") == 0:
@@ -92,9 +98,9 @@ while packet != "Mission Success; Destination reached successfully":
             while coords is None:
                 visited += 1
                 coords = db.select_point_by_visited(visited)
+            visited += 1
             get_current_coords(coords)
     elif packet[0] == "[":
         coordinate_topography()
 
     recipient, packet = unwrap_message()
-
