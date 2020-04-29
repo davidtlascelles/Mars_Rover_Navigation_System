@@ -77,9 +77,9 @@ class Database:
                                         );"""
         sql_create_traversed_table = """ CREATE TABLE IF NOT EXISTS traversed(
                                                 traversed_id INTEGER PRIMARY KEY, 
-                                                traversed_x REAL,
-                                                traversed_y REAL,
-                                                FOREIGN KEY (traversed_x, traversed_y) 
+                                                waypoint_x REAL,
+                                                waypoint_y REAL,
+                                                FOREIGN KEY (waypoint_x, waypoint_y) 
                                                     REFERENCES waypoints (x, y)
 
                                         );"""
@@ -157,10 +157,10 @@ class Database:
     def create_traversed(self, traversed):
         """
         Create a new traversed point in the traversed table
-        :param traversed: Traversed tuple (traversed_x, traversed_y)
+        :param traversed: Traversed tuple (waypoint_x, waypoint_y)
         """
         connection = self.__create_connection()
-        sql = ''' INSERT INTO traversed(traversed_x, traversed_y)
+        sql = ''' INSERT INTO traversed(waypoint_x, waypoint_y)
                               VALUES(?,?) '''
         x = traversed[0]
         y = traversed[1]
