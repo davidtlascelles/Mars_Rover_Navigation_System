@@ -8,6 +8,7 @@ class CommunicationDispatch:
     COMM_CHECK_INTERVAL = 2
 
     current = None
+    end = None
 
     def __init__(self):
         self.p = PathFinder()
@@ -40,10 +41,8 @@ class CommunicationDispatch:
             if message[0].strip() == "navigation":
                 if message[1].strip() == "status":
                     self.uplink_current_coordinates(message)
-                    return None
                 if message[1].strip() == "parameters":
                     self.set_parameters(message)
-                    return None
                 return message
             return None
 
@@ -55,31 +54,37 @@ class CommunicationDispatch:
         :return: tuple coordinates
         """
         message = self.__downlink()
-        header_message_type = message[1].strip()
-        # Verify packet contains coordinates
-        if header_message_type == 'coordinates':
-            header_sender = message[2].strip()
-            # Verify packet is from correct sender
-            if header_sender == expected_sender:
-                payload = message[3]
-                payload = payload.rstrip(')')
-                payload = payload.lstrip('(')
-                piece = payload.split(',')
-                unwrapped_payload = (int(float(piece[0])), int(float(piece[1])), float(piece[2]))
-                # Destination coordinates
-                if expected_sender == "mission control":
-                    # unwrapped_payload = (749, 574, 1117.56)
-                    self.uplink_rover_status("GO_DEST")
-                    self.__set_current(unwrapped_payload)
-                    return unwrapped_payload
-                # Current coordinates
-                elif expected_sender == "mps orbiter":
-                    # unwrapped_payload = (1328, 823, 1101.89)
-                    self.uplink_rover_status("GO_POSITION")
-                    return unwrapped_payload
-            self.uplink_rover_status("WRONG_COORDS")
-        self.uplink_rover_status("NO_COORDS")
-        return None
+        if message is not None and message[1].strip() != "parameters":
+            header_message_type = message[1].strip()
+            # Verify packet contains coordinates
+            if header_message_type == 'coordinates':
+                header_sender = message[2].strip()
+                # Verify packet is from correct sender
+                if header_sender == expected_sender:
+                    payload = message[3]
+                    payload = payload.rstrip(')')
+                    payload = payload.lstrip('(')
+                    piece = payload.split(',')
+                    unwrapped_payload = (int(float(piece[0])), int(float(piece[1])), float(piece[2]))
+                    # Destination coordinates
+                    if expected_sender == "mission control":
+                        # unwrapped_payload = (749, 574, 1117.56)
+                        self.uplink_rover_status("GO_DEST")
+                        self.__set_end(unwrapped_payload)
+                        return unwrapped_payload
+                    # Current coordinates
+                    elif expected_sender == "mps orbiter":
+                        # unwrapped_payload = (1328, 823, 1101.89)
+                        self.uplink_rover_status("GO_POSITION")
+                        self.__set_current(unwrapped_payload)
+                        return unwrapped_payload
+                self.uplink_rover_status("WRONG_COORDS")
+            self.uplink_rover_status("NO_COORDS")
+        elif message is None:
+            return None
+        else:
+            return "STOP"
+
 
     def downlink_topography(self):
         """
@@ -142,6 +147,7 @@ class CommunicationDispatch:
             "SUCCESS": "Mission Success; Destination reached successfully",
             "GO_DRIVE": "Driving Initiated: generating drive vectors",
             "DRIVE_FAULT": "Driving Interrupted; critical failure",
+            "STOP": "Driving Interrupted; processing new data",
             "GO_PATH": "Pathfind Success; route established",
             "NO_PATH": "Pathfind Failure; no route established",
             "BACKTRACK": "Pathfind Fault; removing wayponits back to last checkpoint",
@@ -190,7 +196,7 @@ class CommunicationDispatch:
                     self.request_current_coordinates()
                     time.sleep(2)
                     self.current = self.downlink_coordinates("mission control")
-                self.p.restart_pathfinding(self.current)
+                self.p.restart_pathfinding(self, self.current, self.end)
                 return
         return
 
@@ -212,4 +218,9 @@ class CommunicationDispatch:
     @classmethod
     def __set_current(cls, coordinate):
         cls.current = coordinate
+        return
+
+    @classmethod
+    def __set_end(cls, coordinate):
+        cls.end = coordinate
         return

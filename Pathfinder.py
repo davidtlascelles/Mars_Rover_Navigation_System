@@ -1,4 +1,5 @@
 from Database import Database
+from Onboard_Systems_Interface import DriveInterface
 from Vector_Handler import Vector
 
 
@@ -23,7 +24,6 @@ class PathFinder:
 
     def __init__(self):
         self.new_waypoint = None
-
         self.drive = None
         self.comms = None
         self.database = Database()
@@ -66,7 +66,8 @@ class PathFinder:
                 # If there is no safe terrain in any direction, backtrack to the last checkpoint
                 if i == 4:
                     self.comms.uplink_rover_status("BACKTRACK")
-                    self.backtrack()
+                    if self.database.get_table_size("checkpoints") > 0:
+                        self.backtrack()
                     # Recheck for next viable path
                     return self.travel_direction(heading)
 
@@ -136,7 +137,7 @@ class PathFinder:
         :param start: Current coordinates
         :param end: Destination coordinates
         """
-        self.new_waypoint = start
+        self.set_new_point(start)
         if self.destination is None:
             self.set_destination(end)
         self.drive = dr
@@ -163,11 +164,10 @@ class PathFinder:
         # Creates a new checkpoint from the new waypoint
         self.database.create_waypoint(db_point)
         self.checkpoint(new_point, heading)
-        self.new_waypoint = new_point
+        self.set_new_point(new_point)
         if new_point == end:
             comms.uplink_rover_status("GO_PATH")
             dr.drive()
-            print("out of drive")
             return
 
         try:
@@ -176,6 +176,9 @@ class PathFinder:
         except RecursionError:
             print()
             comms.uplink_rover_status("NO_PATH")
+            dr.interrupt_drive_buffer()
+            dr.drive(done=True)
+
         return
 
     def checkpoint(self, point, heading):
@@ -274,7 +277,6 @@ class PathFinder:
     def __new_path(self, point):
         """
         Querys database for a specific point, returns true if the waypoint coordinate is new
-        :param db: Database object
         :param point: Coordinate waypoint
         :return: Boolean value for new coordinate status
         """
@@ -322,9 +324,14 @@ class PathFinder:
         cls.destination = destination
         return
 
-    def restart_pathfinding(self, new_start):
-        print(new_start)
+    def set_new_point(self, new_point):
+        self.new_waypoint = new_point
+        return
+
+    def restart_pathfinding(self, comms, new_start, new_end):
         self.database.delete_all_rows('waypoints')
         self.database.delete_all_rows('checkpoints')
-        self.pathfind(self.drive, self.comms, new_start, self.destination)
+        self.drive = DriveInterface(self.database, comms, new_start, new_end)
+        self.comms = comms
+        self.pathfind(self.drive, comms, new_start, new_end)
         return

@@ -14,33 +14,34 @@ class DriveInterface:
         self.vector_buffer = []
 
     def drive_buffer(self, done=False, initialize=False):
-        start = self.current_coordinate
+        if done is False:
+            start = self.current_coordinate
 
-        if initialize is True:
-            next_waypoint = self.db.select_point_by_visited(1)
-            v = Vector(start, next_waypoint)
-            self.vector_buffer.append((v.vector, v))
-            start = next_waypoint
+            if initialize is True:
+                next_waypoint = self.db.select_point_by_visited(1)
+                v = Vector(start, next_waypoint)
+                self.vector_buffer.append((v.vector, v))
+                start = next_waypoint
 
-        distance = 0
+            distance = 0
 
-        while distance < 10:
-            visited = self.db.get_visited_count(start) + 1
-            next_waypoint = self.db.select_point_by_visited(visited)
-            while next_waypoint is None:
-                visited += 1
+            while distance < 10:
+                visited = self.db.get_visited_count(start) + 1
                 next_waypoint = self.db.select_point_by_visited(visited)
-            visited += 1
+                while next_waypoint is None:
+                    visited += 1
+                    next_waypoint = self.db.select_point_by_visited(visited)
+                visited += 1
 
-            v = Vector(start, next_waypoint)
-            self.vector_buffer.append((v.vector, v))
+                v = Vector(start, next_waypoint)
+                self.vector_buffer.append((v.vector, v))
 
-            d = Vector(self.current_coordinate, next_waypoint)
-            distance = d.magnitude
-            start = next_waypoint
+                d = Vector(self.current_coordinate, next_waypoint)
+                distance = d.magnitude
+                start = next_waypoint
         return
 
-    def __interrupt_drive_buffer(self):
+    def interrupt_drive_buffer(self):
         self.drive_buffer(done=True)
         self.vector_buffer = []
         self.comms.uplink_rover_status("DRIVE_FAULT")
@@ -60,39 +61,45 @@ class DriveInterface:
         self.vector_buffer.append(vector)
         return
 
-    def drive(self):
-        self.comms.uplink_rover_status("GO_DRIVE")
-        print()
-        current = self.current_coordinate
-        self.db.create_traversed(current)
+    def drive(self, done=False):
+        if done is False:
+            self.comms.uplink_rover_status("GO_DRIVE")
+            print()
+            current = self.current_coordinate
+            self.db.create_traversed(current)
 
-        # Initialize drive buffer
-        self.drive_buffer(initialize=True)
+            # Initialize drive buffer
+            self.drive_buffer(initialize=True)
 
-        while self.current_coordinate != self.destination_coordinate:
-            self.current_coordinate = self.downlink_coords()
-            self.db.create_traversed(self.current_coordinate)
-            self.pass_to_sensor_array()
-            time.sleep(.1)
-            print("Waiting for Hazard Avoidance;\t", end='')
-            #if hazard, clear buffer and rebuffer waypoints
-                # clear buffer
-                # add hazard waypoints
-                #self.drive_buffer()
-            self.pass_to_drive_system()
-            response = self.drive_system_response()
-            while response is None:
-                time.sleep(5)
+            while self.current_coordinate != self.destination_coordinate:
+                self.current_coordinate = self.downlink_coords()
+                if self.current_coordinate == (0, 0, 0):
+                    done = True
+                    break
+                self.db.create_traversed(self.current_coordinate)
+                self.pass_to_sensor_array()
+                time.sleep(.1)
+                print("Waiting for Hazard Avoidance;\t", end='')
+                #if hazard, clear buffer and rebuffer waypoints
+                    # clear buffer
+                    # add hazard waypoints
+                    #self.drive_buffer()
+                self.pass_to_drive_system()
                 response = self.drive_system_response()
-                if response == "Error":
-                    self.drive_buffer(done=True)
-                    self.comms.uplink_rover_status("DRIVE_FAULT")
-                    return
-                else:
-                    pass
-            self.drive_buffer()
+                while response is None:
+                    time.sleep(5)
+                    response = self.drive_system_response()
+                    if response == "Error":
+                        self.drive_buffer(done=True)
+                        self.comms.uplink_rover_status("DRIVE_FAULT")
+                        return
+                    else:
+                        pass
+                self.drive_buffer()
 
-        self.comms.uplink_rover_status("SUCCESS")
+            if self.current_coordinate == self.destination_coordinate:
+                self.comms.uplink_rover_status("SUCCESS")
+        self.comms.uplink_rover_status("STOP")
         return
 
     def pass_to_sensor_array(self):
@@ -129,4 +136,8 @@ class DriveInterface:
             self.comms.request_current_coordinates()
             self.wait_for_comms_activity()
             point = self.comms.downlink_coordinates("mps orbiter")
+
+        if point == "STOP":
+            point = (0, 0, 0)
         return point
+
